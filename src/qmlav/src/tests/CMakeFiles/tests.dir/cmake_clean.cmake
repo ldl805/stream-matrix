@@ -1,0 +1,43 @@
+file(REMOVE_RECURSE
+  "CMakeFiles/tests.dir/link.d"
+  "CMakeFiles/tests_autogen.dir/AutogenUsed.txt"
+  "CMakeFiles/tests_autogen.dir/ParseCache.txt"
+  "tests_autogen"
+  "CMakeFiles/tests.dir/__/qmlavaudioiodevice.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavaudioiodevice.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavdecoder.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavdecoder.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavdemuxer.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavdemuxer.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavformat.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavformat.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavframe.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavframe.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavhwoutput.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavhwoutput.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavoptions.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavoptions.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavplayer.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavplayer.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavresampler.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavresampler.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavthread.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavthread.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavutils.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavutils.cpp.o.d"
+  "CMakeFiles/tests.dir/__/qmlavvideobuffer.cpp.o"
+  "CMakeFiles/tests.dir/__/qmlavvideobuffer.cpp.o.d"
+  "CMakeFiles/tests.dir/qmlavthread.cpp.o"
+  "CMakeFiles/tests.dir/qmlavthread.cpp.o.d"
+  "CMakeFiles/tests.dir/tests_autogen/mocs_compilation.cpp.o"
+  "CMakeFiles/tests.dir/tests_autogen/mocs_compilation.cpp.o.d"
+  "tests"
+  "tests.pdb"
+  "tests_autogen/mocs_compilation.cpp"
+  "tests_autogen/timestamp"
+)
+
+# Per-language clean rules from dependency scanning.
+foreach(lang CXX)
+  include(CMakeFiles/tests.dir/cmake_clean_${lang}.cmake OPTIONAL)
+endforeach()
