@@ -93,7 +93,7 @@ sudo apt install -y \
 Clone the repository recursively to fetch all dependencies:
 
 ```bash
-git clone --recurse-submodules https://github.com/your-username/stream-matrix.git
+git clone --recurse-submodules https://github.com/ldl805/stream-matrix.git
 cd stream-matrix
 
 # Configure and build
