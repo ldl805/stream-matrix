@@ -77,8 +77,10 @@ ApplicationWindow {
         property string models
         property bool presetIndicator: true
         property string defaultAVFormatOptions: JSON.stringify({
-            "analyzeduration": 0, // 0 µs
-            "probesize": 500000   // 500 KB
+            "hwaccel": "drm",
+            "rtsp_transport": "tcp",
+            "fflags": "nobuffer",
+            "flags": "low_delay"
         })
 
         function toJSValue(key) {
@@ -201,10 +203,6 @@ ApplicationWindow {
 
         onCountChanged: stackLayout.currentIndex = stackLayout.currentIndex.clamp(0, layoutsCollectionModel.count - 1)
         Component.onCompleted: {
-            // Demo streams
-            get(0).get(0).url = "rtmp://live.a71.ru/demo/0";
-            get(0).get(1).url = "rtmp://live.a71.ru/demo/1";
-
             try {
                 if (!layoutsCollectionSettings.models.isEmpty()) {
                     fromJSValue(JSON.parse(layoutsCollectionSettings.models));
