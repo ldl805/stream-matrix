@@ -4,6 +4,9 @@ import QtQuick.Layouts 1.12
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
 import Qt.labs.settings 1.0
+import StreamMatrix.Core 1.0
+import StreamMatrix.Themes 1.0
+import StreamMatrix.Utils 1.0
 import CCTV_Viewer.Core 1.0
 import CCTV_Viewer.Themes 1.0
 import CCTV_Viewer.Utils 1.0
@@ -457,13 +460,33 @@ FocusScope {
                                 anchors.fill: parent
 
                                 TextField {
+                                    text: enabled ? (Utils.currentModel().get(currentViewportIndex).name || "") : ""
+                                    placeholderText: qsTr("Camera Name (e.g. Front Gate)")
+                                    selectByMouse: true
+
+                                    Layout.fillWidth: true
+
+                                    onEditingFinished: Utils.currentModel().get(currentViewportIndex).name = text
+                                }
+
+                                TextField {
                                     text: enabled ? Utils.currentModel().get(currentViewportIndex).url : ""
-                                    placeholderText: qsTr("Url")
+                                    placeholderText: qsTr("Main Stream URL (RTSP/RTMP/HTTP)")
                                     selectByMouse: true
 
                                     Layout.fillWidth: true
 
                                     onEditingFinished: Utils.currentModel().get(currentViewportIndex).url = text
+                                }
+
+                                TextField {
+                                    text: enabled ? (Utils.currentModel().get(currentViewportIndex).subUrl || "") : ""
+                                    placeholderText: qsTr("Sub-Stream URL (Low Res)")
+                                    selectByMouse: true
+
+                                    Layout.fillWidth: true
+
+                                    onEditingFinished: Utils.currentModel().get(currentViewportIndex).subUrl = text
                                 }
 
                                 Button {

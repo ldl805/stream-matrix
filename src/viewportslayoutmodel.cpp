@@ -42,7 +42,8 @@ QVariant ViewportsLayoutModel::data(const QModelIndex &index, int role) const
         return {};
     }
 
-    return get(index.row())->property(m_roleNames.value(role));
+    auto item = get(index.row());
+    return item ? item->property(m_roleNames.value(role)) : QVariant();
 }
 
 bool ViewportsLayoutModel::setData(const QModelIndex &index, const QVariant &value, int role)
@@ -51,7 +52,8 @@ bool ViewportsLayoutModel::setData(const QModelIndex &index, const QVariant &val
         return false;
     }
 
-    return get(index.row())->setProperty(m_roleNames.value(role), value);
+    auto item = get(index.row());
+    return item ? item->setProperty(m_roleNames.value(role), value) : false;
 }
 
 ViewportsLayoutItem *ViewportsLayoutModel::set(int index, ViewportsLayoutItem *p)
@@ -108,74 +110,90 @@ void ViewportsLayoutModel::normalize()
         emit sizeChanged(QSize(m_columns, m_rows));
     }
 
-normalize:
-    // Mormalize properties
-    for (int index = 0; index < m_items.size(); ++index) {
-        auto item = get(index);
+    int maxIterations = 5;
+    while (maxIterations-- > 0) {
+        bool collisionFound = false;
 
-        if (item == nullptr) {
-            QQmlEngine *engine = qmlEngine(this);
+        // Normalize properties
+        for (int index = 0; index < m_items.size(); ++index) {
+            auto item = get(index);
 
-            Q_ASSERT(engine != nullptr);
+            if (item == nullptr) {
+                QQmlEngine *engine = qmlEngine(this);
 
-            item = new ViewportsLayoutItem(this);
-            QQmlEngine::setContextForObject(item, engine->rootContext());
+                if (engine != nullptr) {
+                    item = new ViewportsLayoutItem(this);
+                    QQmlEngine::setContextForObject(item, engine->rootContext());
 
-            connect(item, &ViewportsLayoutItem::changed, this, [=] {
-                for (int i = 0; i < m_items.size(); ++i) {
-                    if (item == m_items.at(i)) {
-                        QModelIndex index = createIndex(i, 0);
-                        emit reinterpret_cast<ViewportsLayoutModel *>(this)->dataChanged(index, index);
-                    }
+                    connect(item, &ViewportsLayoutItem::changed, this, [this, item] {
+                        for (int i = 0; i < m_items.size(); ++i) {
+                            if (item == m_items.at(i)) {
+                                QModelIndex modelIdx = createIndex(i, 0);
+                                emit dataChanged(modelIdx, modelIdx);
+                            }
+                        }
+                    });
+
+                    set(index, item);
                 }
-            });
+            } else {
+                int span = 1;
+                int columnSpan = clamp(item->property("columnSpan").toInt(), 1, std::max(1, m_columns - column(index)));
+                int rowSpan = clamp(item->property("rowSpan").toInt(), 1, std::max(1, m_rows - row(index)));
 
-            set(index, item);
-        } else {
-            int span = 1;
-            int columnSpan = clamp(item->property("columnSpan").toInt(), 1, m_columns - column(index));
-            int rowSpan = clamp(item->property("rowSpan").toInt(), 1, m_rows - row(index));
+                if (columnSpan != m_columns || rowSpan != m_rows) {
+                    span = std::min(rowSpan, columnSpan);
+                }
 
-            if (columnSpan != m_columns || rowSpan != m_rows) {
-                span = std::min(rowSpan, columnSpan);
+                item->setProperty("columnSpan", span);
+                item->setProperty("rowSpan", span);
+                item->setProperty("visible", static_cast<int>(ViewportsLayoutItem::Visible::Visible));
+                item->setProperty("volume", clamp(item->property("volume").toDouble(), 0.0, 1.0));
             }
+        }
 
-            item->setProperty("columnSpan", span);
-            item->setProperty("rowSpan", span);
-            item->setProperty("visible", static_cast<int>(ViewportsLayoutItem::Visible::Visible));
-            item->setProperty("volume", clamp(item->property("volume").toDouble(), 0.0, 1.0));
+        for (int index = 0; index < m_items.size(); ++index) {
+            auto item = get(index);
+            if (!item) continue;
+
+            if (item->property("visible").toInt() == static_cast<int>(ViewportsLayoutItem::Visible::Visible)) {
+                int columnSpan = item->property("columnSpan").toInt();
+                int rowSpan = item->property("rowSpan").toInt();
+
+                // Iterate hidden elements
+                for (int r = 0; r < rowSpan; ++r) {
+                    for (int c = 0; c < columnSpan; ++c) {
+                        int hiddenIndex = dataIndex(column(index) + c, row(index) + r);
+                        if (hiddenIndex != index && hiddenIndex >= 0 && hiddenIndex < m_items.size()) {
+                            auto hiddenItem = get(hiddenIndex);
+                            if (!hiddenItem) continue;
+
+                            if (hiddenItem->property("visible").toInt() == static_cast<int>(ViewportsLayoutItem::Visible::Visible)) {
+                                hiddenItem->setProperty("columnSpan", -c);
+                                hiddenItem->setProperty("rowSpan", -r);
+                                hiddenItem->setProperty("visible", static_cast<int>(ViewportsLayoutItem::Visible::Hidden));
+                            } else {
+                                // Span collision
+                                item->setProperty("columnSpan", 1);
+                                item->setProperty("rowSpan", 1);
+                                collisionFound = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (collisionFound) break;
+                }
+            }
+            if (collisionFound) break;
+        }
+
+        if (!collisionFound) {
+            break;
         }
     }
 
-    for (int index = 0; index < m_items.size(); ++index) {
-        auto item = get(index);
-
-        if (item->property("visible").toInt() == static_cast<int>(ViewportsLayoutItem::Visible::Visible)) {
-            int columnSpan = item->property("columnSpan").toInt();
-            int rowSpan = item->property("rowSpan").toInt();
-
-            // Iterate hidden elements
-            for (int r = 0; r < rowSpan; ++r) {
-                for (int c = 0; c < columnSpan; ++c) {
-                    int hiddenIndex = dataIndex(column(index) + c, row(index) + r);
-                    if (hiddenIndex != index) {
-                        auto hiddenItem = get(hiddenIndex);
-                        if (hiddenItem->property("visible").toInt() == static_cast<int>(ViewportsLayoutItem::Visible::Visible)) {
-                            hiddenItem->setProperty("columnSpan", -c);
-                            hiddenItem->setProperty("rowSpan", -r);
-                            hiddenItem->setProperty("visible", static_cast<int>(ViewportsLayoutItem::Visible::Hidden));
-                        } else {
-                            // Span collision
-                            item->setProperty("columnSpan", 1);
-                            item->setProperty("rowSpan", 1);
-                            goto normalize;
-                        }
-                    }
-                }
-            }
-        }
-
-        emit dataChanged(QModelIndex(), QModelIndex());
+    if (!m_items.isEmpty()) {
+        emit dataChanged(createIndex(0, 0), createIndex(m_items.size() - 1, 0));
     }
 }
 
@@ -213,7 +231,9 @@ void ViewportsLayoutModel::fromJSValue(const QVariantMap &model)
 
                 const char *name = role.value();
                 QVariantMap item = items.at(i).toMap();
-                m_items.at(i)->setProperty(name, item.value(name));
+                if (item.contains(name)) {
+                    m_items.at(i)->setProperty(name, item.value(name));
+                }
             }
         }
     }

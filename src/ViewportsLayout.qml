@@ -2,6 +2,9 @@ import QtQml 2.12
 import QtQuick 2.12
 import QtQuick.Layouts 1.12
 import QtMultimedia 5.12
+import StreamMatrix.Core 1.0
+import StreamMatrix.Utils 1.0
+import StreamMatrix.Models 1.0
 import CCTV_Viewer.Core 1.0
 import CCTV_Viewer.Utils 1.0
 import CCTV_Viewer.Models 1.0
@@ -371,7 +374,11 @@ FocusScope {
 
                         property bool selected: d.selectionContains(model.index)
 
-                        property url url: model.url
+                        property string name: model.name ? model.name : ""
+                        property url url: model.url ? model.url : ""
+                        property url subUrl: model.subUrl ? model.subUrl : ""
+                        property url activeSource: (viewport.fullScreen || (root.size.width === 1 && root.size.height === 1) || String(subUrl).length === 0) ? url : subUrl
+
                         property int column: d.columnFromIndex(model.index)
                         property int row: d.rowFromIndex(model.index)
                         property int columnSpan: model.columnSpan
@@ -430,7 +437,9 @@ FocusScope {
                             id: player
 
                             color: root.color
-                            source: viewport.url
+                            cameraTitle: d2.name
+                            showDiagnostics: viewSettings.showDiagnostics
+                            source: d2.activeSource
                             volume: Math.max(viewport.volume, root.fullScreenIndex === index && viewportSettings.unmuteWhenFullScreen)
                             avOptions: viewport.avFormatOptions
                             loops: MediaPlayer.Infinite

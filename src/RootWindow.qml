@@ -5,6 +5,9 @@ import QtQuick.Layouts 1.12
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
 import Qt.labs.settings 1.0
+import StreamMatrix.Core 1.0
+import StreamMatrix.Models 1.0
+import StreamMatrix.Utils 1.0
 import CCTV_Viewer.Core 1.0
 import CCTV_Viewer.Models 1.0
 import CCTV_Viewer.Utils 1.0
@@ -12,7 +15,7 @@ import CCTV_Viewer.Utils 1.0
 ApplicationWindow {
     id: rootWindow
 
-    title: qsTr("CCTV Viewer")
+    title: qsTr("StreamMatrix")
 
     visible: true
     visibility: Context.config.fullScreen ? Window.FullScreen : Window.Windowed
@@ -72,9 +75,7 @@ ApplicationWindow {
 
         property int currentIndex
         property string models
-        // TODO: Move to "View"
         property bool presetIndicator: true
-        // TODO: Move to "Viewport"
         property string defaultAVFormatOptions: JSON.stringify({
             "analyzeduration": 0, // 0 µs
             "probesize": 500000   // 500 KB
@@ -100,6 +101,7 @@ ApplicationWindow {
         category: "View"
 
         property bool hideCursorWhenFullScreen: true
+        property bool showDiagnostics: false
     }
 
     Settings {
@@ -109,6 +111,7 @@ ApplicationWindow {
         category: "Viewport"
 
         property bool unmuteWhenFullScreen: false
+        property bool autoReconnect: true
     }
 
     Settings {
@@ -136,6 +139,12 @@ ApplicationWindow {
                     }
                 }
             }
+        }
+    }
+    Shortcut {
+        sequence: "D"
+        onActivated: {
+            viewSettings.showDiagnostics = !viewSettings.showDiagnostics;
         }
     }
     Shortcut {
@@ -275,7 +284,6 @@ ApplicationWindow {
             onCarouselControlClicked: carouselTimer.paused = (carouselState === PresetIndicator.Running ? true : false)
         }
     }
-
 
     Loader {
         id: sideBarLoader

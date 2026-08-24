@@ -40,7 +40,7 @@ void Context::init()
 
  void Context::parseCommandLineOptions(const QList<QCommandLineOption> &options)
 {
-    m_commandLineParser.setApplicationDescription(tr("CCTV Viewer - viewer and mounter video streams."));
+    m_commandLineParser.setApplicationDescription(tr("StreamMatrix - high performance viewer and monitor for video streams."));
     m_commandLineParser.addHelpOption();
     m_commandLineParser.addVersionOption();
 

@@ -2,6 +2,7 @@ import QtQuick 2.12
 import QtQuick.Layouts 1.12
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
+import StreamMatrix.Utils 1.0
 import CCTV_Viewer.Utils 1.0
 
 Dialog {
@@ -25,18 +26,15 @@ Dialog {
             Layout.fillWidth: true
 
             ColumnLayout {
-
                 width: parent.width
 
                 CheckBox {
                     id: singleApplicationCheckBox
-
                     text: qsTr("Allow running multiple application instances")
                 }
 
                 CheckBox {
                     id: sidebarAutoCollapseCheckBox
-
                     text: qsTr("Automatically collapse sidebar") 
                 }
             }
@@ -52,14 +50,17 @@ Dialog {
 
                 CheckBox {
                     id: presetIndicatorCheckBox
-
                     text: qsTr("Show preset indicator")
                 }
 
                 CheckBox {
                     id: hideCursorWhenFullScreenCheckBox
-
                     text: qsTr("Hide cursor in full screen mode")
+                }
+
+                CheckBox {
+                    id: showDiagnosticsCheckBox
+                    text: qsTr("Show stream health diagnostics (FPS, bitrate, resolution) [Hotkey: D]")
                 }
             }
         }
@@ -74,8 +75,12 @@ Dialog {
 
                 CheckBox {
                     id: unmuteWhenFullScreenCheckBox
-
                     text: qsTr("Unmute when the viewport is in full screen mode")
+                }
+
+                CheckBox {
+                    id: autoReconnectCheckBox
+                    text: qsTr("Automatically reconnect dropped streams with backoff")
                 }
 
                 Label {
@@ -84,9 +89,7 @@ Dialog {
 
                 TextField {
                     id: defaultAVFormatOptions
-
                     selectByMouse: true
-
                     Layout.fillWidth: true
                 }
             }
@@ -105,19 +108,14 @@ Dialog {
 
                     CheckBox {
                         id: carouselRunningCheckBox
-
                         text: qsTr("Run presets carousel with interval (sec.):")
-
                         Layout.fillWidth: true
                     }
 
                     SpinBox {
                         id: carouselIntervalSpinBox
-
                         property int valueFactor: 1000
-
                         enabled: carouselRunningCheckBox.checked
-
                         stepSize: 100
                         from: stepSize
                         to: 300 * stepSize
@@ -142,15 +140,12 @@ Dialog {
 
     function loadSettings() {
         singleApplicationCheckBox.checked = !generalSettings.singleApplication;
-        
         sidebarAutoCollapseCheckBox.checked = rootWindowSettings.sidebarAutoCollapse;
-        
         presetIndicatorCheckBox.checked = layoutsCollectionSettings.presetIndicator;
-
         hideCursorWhenFullScreenCheckBox.checked = viewSettings.hideCursorWhenFullScreen;
-
+        showDiagnosticsCheckBox.checked = viewSettings.showDiagnostics;
         unmuteWhenFullScreenCheckBox.checked = viewportSettings.unmuteWhenFullScreen;
-
+        autoReconnectCheckBox.checked = viewportSettings.autoReconnect;
         carouselRunningCheckBox.checked = presetsSettings.carouselRunning;
         carouselIntervalSpinBox.value = presetsSettings.carouselInterval;
 
@@ -166,15 +161,12 @@ Dialog {
 
     function saveSettings() {
         generalSettings.singleApplication = !singleApplicationCheckBox.checked;
-        
         rootWindowSettings.sidebarAutoCollapse = sidebarAutoCollapseCheckBox.checked;
-        
         layoutsCollectionSettings.presetIndicator = presetIndicatorCheckBox.checked;
-
         viewSettings.hideCursorWhenFullScreen = hideCursorWhenFullScreenCheckBox.checked;
-
+        viewSettings.showDiagnostics = showDiagnosticsCheckBox.checked;
         viewportSettings.unmuteWhenFullScreen = unmuteWhenFullScreenCheckBox.checked;
-
+        viewportSettings.autoReconnect = autoReconnectCheckBox.checked;
         presetsSettings.carouselRunning = carouselRunningCheckBox.checked;
         presetsSettings.carouselInterval = carouselIntervalSpinBox.value;
 

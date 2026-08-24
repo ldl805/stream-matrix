@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.14)
 
-set(VER_MAJ 0)
-set(VER_MIN 1)
-set(VER_PAT 9)
+set(VER_MAJ 1)
+set(VER_MIN 0)
+set(VER_PAT 0)
 set(REL_STATUS "alpha")
 
-set(APP_NAME "CCTV Viewer")
-set(ORG_NAME "CCTV Viewer")
-set(ORG_DOMAIN "cctv-viewer.org")
+set(APP_NAME "StreamMatrix")
+set(ORG_NAME "StreamMatrix")
+set(ORG_DOMAIN "streammatrix.org")
 
 set(VERSION "${VER_MAJ}.${VER_MIN}")
 
@@ -15,7 +15,7 @@ if(${VER_PAT} GREATER 0)
     set(VERSION "${VERSION}.${VER_PAT}")
 endif()
 
-project(cctv-viewer VERSION ${VERSION} HOMEPAGE_URL "https://github.com/iEvgeny/cctv-viewer" LANGUAGES C CXX)
+project(stream-matrix VERSION ${VERSION} LANGUAGES C CXX)
 
 if(DEFINED REL_STATUS)
     set(VERSION "${VERSION}-${REL_STATUS}")
@@ -32,7 +32,7 @@ if (EXISTS "${CMAKE_SOURCE_DIR}/debian/git-build-recipe.manifest")
 
     if ("${GIT_COMMIT}" STREQUAL "")
         file(READ "${CMAKE_SOURCE_DIR}/debian/git-build-recipe.manifest" PPA_MANIFEST)
-        string(REGEX MATCH "lp:cctv-viewer git-commit:(.......)" _ ${PPA_MANIFEST})
+        string(REGEX MATCH "lp:stream-matrix git-commit:(.......)" _ ${PPA_MANIFEST})
         set(GIT_COMMIT ${CMAKE_MATCH_1})
     endif()
 endif()
@@ -68,16 +68,11 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT ANDROID)
     add_compile_options(
-        -Werror
-        -pedantic-errors
-
         -Wall
         -Wextra
         -Wpedantic
-
         -Wcast-align
         -Wcast-qual
-        # -Wconversion
         -Wctor-dtor-privacy
         -Wduplicated-branches
         -Wduplicated-cond
@@ -86,28 +81,12 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT ANDROID)
         -Wlogical-op
         -Wnon-virtual-dtor
         -Wold-style-cast
-        # -Woverloaded-virtual
         -Wredundant-decls
-        # -Wsign-conversion
-        # -Wsign-promo
     )
 endif()
 
 # Disable use of C++ API deprecated in Qt 5.15
 add_compile_definitions(QT_DISABLE_DEPRECATED_BEFORE=0x050F00)
-
-# QtCreator supports the following variables for Android, which are identical to qmake Android variables.
-# Check https://doc.qt.io/qt/deployment-android.html for more information.
-# They need to be set before the find_package(...) calls below.
-
-#if(ANDROID)
-#    set(ANDROID_PACKAGE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/android")
-#    if (ANDROID_ABI STREQUAL "armeabi-v7a")
-#        set(ANDROID_EXTRA_LIBS
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libcrypto.so
-#            ${CMAKE_CURRENT_SOURCE_DIR}/path/to/libssl.so)
-#    endif()
-#endif()
 
 set(QT_LINK_DEPENDENCIES Core Quick Multimedia)
 
@@ -136,19 +115,15 @@ else()
     include_directories(${LIBAV_INCLUDE_DIRS})
 endif()
 
-find_package(QT NAMES Qt6 Qt5 COMPONENTS ${QT_LINK_DEPENDENCIES} QuickCompiler LinguistTools REQUIRED)
-find_package(Qt${QT_VERSION_MAJOR} 5.12 COMPONENTS ${QT_LINK_DEPENDENCIES} QuickCompiler LinguistTools REQUIRED)
+find_package(Qt5 5.12 COMPONENTS ${QT_LINK_DEPENDENCIES} LinguistTools REQUIRED)
+find_package(Qt5QuickCompiler QUIET)
 
 file(GLOB TS_FILES "${CMAKE_SOURCE_DIR}/translations/*.ts")
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-    if (${QT_VERSION_MAJOR} GREATER 5)
-        qt_add_resources(RESOURCES cctv-viewer.qrc)
-    else()
-        qt5_add_resources(RESOURCES cctv-viewer.qrc)
-    endif()
+if (Qt5QuickCompiler_FOUND AND NOT CMAKE_BUILD_TYPE STREQUAL "Debug")
+    qtquick_compiler_add_resources(RESOURCES stream-matrix.qrc)
 else()
-    qtquick_compiler_add_resources(RESOURCES cctv-viewer.qrc)
+    qt5_add_resources(RESOURCES stream-matrix.qrc)
 endif()
 
 set(PROJ_FILES
@@ -169,36 +144,32 @@ set(QML_IMPORT_PATH "${CMAKE_SOURCE_DIR}/src/imports" CACHE STRING "Additional i
 add_subdirectory(src/qmlav)
 
 if (ANDROID)
-    add_library(cctv-viewer SHARED ${PROJ_FILES} ${QMLAV_FILES})
+    add_library(stream-matrix SHARED ${PROJ_FILES} ${QMLAV_FILES})
 
-    target_include_directories(cctv-viewer PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/include")
-    target_link_directories(cctv-viewer PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/lib")
+    target_include_directories(stream-matrix PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/include")
+    target_link_directories(stream-matrix PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/lib")
 else()
-    add_executable(cctv-viewer ${PROJ_FILES} ${QMLAV_FILES})
+    add_executable(stream-matrix ${PROJ_FILES} ${QMLAV_FILES})
 endif()
 
-target_include_directories(cctv-viewer PRIVATE ${QMLAV_INCLUDE})
+target_include_directories(stream-matrix PRIVATE ${QMLAV_INCLUDE})
 
-target_compile_definitions(cctv-viewer
+target_compile_definitions(stream-matrix
     PRIVATE $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:QT_QML_DEBUG>)
 
 foreach (ITEM ${QT_LINK_DEPENDENCIES})
-    target_link_libraries(cctv-viewer PRIVATE Qt${QT_VERSION_MAJOR}::${ITEM})
+    target_link_libraries(stream-matrix PRIVATE Qt5::${ITEM})
 endforeach()
-target_link_libraries(cctv-viewer PRIVATE ${QMLAV_LINK_DEPENDENCIES})
+target_link_libraries(stream-matrix PRIVATE ${QMLAV_LINK_DEPENDENCIES})
 
 set_directory_properties(PROPERTIES CLEAN_NO_CUSTOM true)
 set_source_files_properties(${TS_FILES} PROPERTIES OUTPUT_LOCATION "${CMAKE_SOURCE_DIR}/translations")
-if (${QT_VERSION_MAJOR} GREATER 5)
-    qt_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-else()
-    qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
-endif()
+qt5_create_translation(QM_FILES ${CMAKE_SOURCE_DIR} ${TS_FILES})
 
 if (UNIX AND NOT ANDROID)
     include(GNUInstallDirs)
     set(CMAKE_INSTALL_PREFIX "/usr")
-    install(TARGETS cctv-viewer DESTINATION "${CMAKE_INSTALL_BINDIR}")
-    install(FILES "images/cctv-viewer.svg" DESTINATION "/usr/share/pixmaps")
-    install(FILES "cctv-viewer.desktop" DESTINATION "/usr/share/applications")
+    install(TARGETS stream-matrix DESTINATION "${CMAKE_INSTALL_BINDIR}")
+    install(FILES "images/stream-matrix.svg" DESTINATION "/usr/share/pixmaps")
+    install(FILES "stream-matrix.desktop" DESTINATION "/usr/share/applications")
 endif()

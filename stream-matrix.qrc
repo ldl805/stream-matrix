@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/">
         <file>qtquickcontrols2.conf</file>
+        <file>translations/stream-matrix_ru_RU.qm</file>
         <file>translations/cctv-viewer_ru_RU.qm</file>
         <file>src/RootWindow.qml</file>
         <file>src/SettingsDialog.qml</file>
@@ -8,6 +9,8 @@
         <file>src/ViewportsLayout.qml</file>
         <file>src/SideBar.qml</file>
         <file>src/SideBarItem.qml</file>
+        <file>images/stream-matrix.svg</file>
+        <file>images/stream-matrix.ico</file>
         <file>images/cctv-viewer.svg</file>
         <file>images/cctv-viewer.ico</file>
         <file>images/menu-viewport.svg</file>
@@ -17,6 +20,16 @@
         <file>images/menu.svg</file>
         <file>images/menu-collapse.svg</file>
         <file>images/menu-item-collapse.svg</file>
+        <file>src/imports/StreamMatrix/Utils/qmldir</file>
+        <file>src/imports/StreamMatrix/Utils/utils.js</file>
+        <file>src/imports/StreamMatrix/Themes/qmldir</file>
+        <file>src/imports/StreamMatrix/Themes/Compact.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/Button.qml">src/imports/StreamMatrix/Themes/Compact/Button.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/Frame.qml">src/imports/StreamMatrix/Themes/Compact/Frame.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/GroupBox.qml">src/imports/StreamMatrix/Themes/Compact/GroupBox.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/TextField.qml">src/imports/StreamMatrix/Themes/Compact/TextField.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/CheckBox.qml">src/imports/StreamMatrix/Themes/Compact/CheckBox.qml</file>
+        <file alias="StreamMatrix/Themes/Compact/ToolTip.qml">src/imports/StreamMatrix/Themes/Compact/ToolTip.qml</file>
         <file>src/imports/CCTV_Viewer/Utils/qmldir</file>
         <file>src/imports/CCTV_Viewer/Utils/utils.js</file>
         <file>src/imports/CCTV_Viewer/Themes/qmldir</file>

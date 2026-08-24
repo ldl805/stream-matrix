@@ -1,7 +1,7 @@
 #ifndef VIEWPORTSLAYOUTMODEL_H
 #define VIEWPORTSLAYOUTMODEL_H
 
-#include <math.h>
+#include <cmath>
 
 #include <QQmlEngine>
 #include <QAbstractListModel>
@@ -9,7 +9,6 @@
 
 #include "qmlavpropertyhelpers.h"
 
-// TODO: Reimplement this with QSize/QRect as a span property
 class ViewportsLayoutItem : public QObject
 {
     Q_OBJECT
@@ -21,7 +20,9 @@ public:
     };
     Q_ENUM(Visible)
 
+    QMLAV_PROPERTY(QString, name, setName, nameChanged);
     QMLAV_PROPERTY(QString, url, setUrl, urlChanged);
+    QMLAV_PROPERTY(QString, subUrl, setSubUrl, subUrlChanged);
     QMLAV_PROPERTY(int, rowSpan, setRowSpan, rowSpanChanged) = 1;
     QMLAV_PROPERTY(int, columnSpan, setColumnSpan, columnSpanChanged) = 1;
     QMLAV_PROPERTY(ViewportsLayoutItem::Visible, visible, setVisible, visibleChanged) = Visible::Visible;
@@ -76,8 +77,8 @@ signals:
 
 protected:
     int dataIndex(int column, int row) const { return m_columns * row + column; }
-    int column(int index) const { return index % m_columns; }
-    int row(int index) const { return std::floor(index / m_columns); }
+    int column(int index) const { return m_columns > 0 ? (index % m_columns) : 0; }
+    int row(int index) const { return m_columns > 0 ? (index / m_columns) : 0; }
 
 private:
     template<class T>
