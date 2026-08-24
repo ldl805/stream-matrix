@@ -113,23 +113,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="90"/>
-        <location filename="../src/RootWindow.qml" line="213"/>
+        <location filename="../src/RootWindow.qml" line="92"/>
+        <location filename="../src/RootWindow.qml" line="211"/>
         <source>Error reading configuration!</source>
         <translation>Ошибка чтения конфигурации!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="302"/>
+        <location filename="../src/RootWindow.qml" line="300"/>
         <source>Already running!</source>
         <translation>Уже запущено!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="304"/>
+        <location filename="../src/RootWindow.qml" line="302"/>
         <source>The application is already running!</source>
         <translation>Приложение уже запущено!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="305"/>
+        <location filename="../src/RootWindow.qml" line="303"/>
         <source>Go to the first instance and allow multiple instances of the app to run in Settings.</source>
         <translation>Перейдите к первому экземпляру и разрешите запуск нескольких экземпляров приложения в настройках.</translation>
     </message>
