@@ -634,6 +634,14 @@ FocusScope {
 
                         onClicked: settingsDialog.open()
                     }
+                    SideBarItem {
+                        icon: "qrc:/images/menu-collapse.svg"
+                        title: qsTr("Exit")
+
+                        Layout.fillWidth: true
+
+                        onClicked: Qt.quit()
+                    }
                 }
 
                 SideBarItem {

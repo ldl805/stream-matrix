@@ -183,8 +183,13 @@ ApplicationWindow {
         }
     }
     Shortcut {
-        sequence: StandardKey.Quit
+        sequences: [StandardKey.Quit, StandardKey.Close, "Ctrl+Q", "Ctrl+W", "Alt+F4"]
         onActivated: Qt.quit()
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: Context.config.fullScreen
+        onActivated: Context.config.fullScreen = false
     }
 
     ViewportsLayoutsCollectionModel {

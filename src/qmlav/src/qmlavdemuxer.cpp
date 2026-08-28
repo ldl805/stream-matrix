@@ -15,12 +15,30 @@ QmlAVDemuxer::~QmlAVDemuxer()
 {
     m_interruptCallback.requestAVInterrupt();
 
+    // 1. First interrupt decoders without waiting so their packet queues (which might be full
+    // and blocking m_demuxerThread in enqueue()) wake up waiting producer threads immediately.
+    if (m_context) {
+        if (m_context->videoDecoder) {
+            m_context->videoDecoder->requestInterrupt(false);
+        }
+        if (m_context->audioDecoder) {
+            m_context->audioDecoder->requestInterrupt(false);
+        }
+    }
+
+    // 2. Interrupt and wait for loader and demuxer threads
     m_loaderThread.requestInterrupt(true);
     m_demuxerThread.requestInterrupt(true);
 
-    // Important! Serialization point for decoders dtor's
-    m_context->videoDecoder->requestInterrupt(true);
-    m_context->audioDecoder->requestInterrupt(true);
+    // 3. Important! Serialization point for decoders dtor's
+    if (m_context) {
+        if (m_context->videoDecoder) {
+            m_context->videoDecoder->requestInterrupt(true);
+        }
+        if (m_context->audioDecoder) {
+            m_context->audioDecoder->requestInterrupt(true);
+        }
+    }
 }
 
 void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
