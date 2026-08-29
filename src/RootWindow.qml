@@ -22,6 +22,8 @@ ApplicationWindow {
     width: rootWindowSettings.width
     height: rootWindowSettings.height
 
+    onClosing: Qt.quit()
+
     // Right-to-left User Interfaces support
     LayoutMirroring.enabled: Qt.application.layoutDirection == Qt.RightToLeft
     LayoutMirroring.childrenInherit: true

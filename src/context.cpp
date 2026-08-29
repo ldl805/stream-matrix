@@ -3,7 +3,10 @@
 
 Context::~Context()
 {
-    delete m_config;
+    if (m_config) {
+        delete m_config;
+        m_config = nullptr;
+    }
 }
 
 void Context::init()

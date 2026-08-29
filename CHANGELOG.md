@@ -5,7 +5,15 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
----
+## [1.0.1] - 2026-08-29
+
+### Fixed
+- **Shutdown and Quit Execution**: Connected QML engine `quit` signal to `QGuiApplication::quit` and added window `onClosing` hook, resolving issues where the app ignored quit shortcuts and menu actions.
+- **Worker Thread Deadlock Prevention**: Fixed `requestInterrupt` across decoder waiting queues to properly wake blocked producer threads during shutdown and feed cancellation.
+- **Demuxer Loop Flood on Failure**: Corrected decode error propagation in the demuxer loop to prevent tight infinite loop spinning and event queue saturation.
+- **Thread Concurrency in `wait()`**: Synchronized worker thread completion waiting on condition variables to prevent concurrent `join()` data races.
+- **Video Buffer Plane Count**: Ensured planar video buffer returns accurate active plane counts to prevent out-of-bounds plane sampling in Qt Quick rendering.
+- **Context Double-Free**: Added pointer safety in `Context` destructor.
 
 ## [1.0.0] - 2026-08-24
 

@@ -61,7 +61,7 @@ public:
     }
 
     virtual void requestInterrupt() override {
-        m_results.setConsumerLimit(0);
+        m_results.requestInterrupt();
     }
 
 protected:
@@ -173,7 +173,7 @@ public:
 
     virtual void requestInterrupt() override final {
         if (m_argsQueue) {
-            m_argsQueue->setConsumerLimit(0);
+            m_argsQueue->requestInterrupt();
         }
 
         __Super::requestInterrupt();
@@ -194,6 +194,9 @@ public:
     virtual ~QmlAVWorkerThread() {
         requestInterrupt();
         wait();
+        if (m_thread.joinable() && std::this_thread::get_id() != m_thread.get_id()) {
+            m_thread.join();
+        }
     }
 
     void start() {
@@ -202,8 +205,8 @@ public:
         }
     }
     void wait() {
-        if (m_thread.joinable() && std::this_thread::get_id() != m_thread.get_id()) {
-            m_thread.join();
+        if (std::this_thread::get_id() == m_thread.get_id()) {
+            return;
         }
         std::unique_lock<std::mutex> lock(m_mutex);
         m_waitCond.wait(lock, [&] {
@@ -355,8 +358,8 @@ public:
     auto argsQueue() const { return m_argsQueue; }
 
     template<typename ...URef>
-    void operator() (URef &&...args) {
-        m_argsQueue->enqueue(std::forward_as_tuple(args...));
+    bool operator() (URef &&...args) {
+        return m_argsQueue->enqueue(std::forward_as_tuple(args...));
     }
 
     auto getLiveController() {

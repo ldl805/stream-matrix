@@ -160,9 +160,13 @@ void QmlAVDemuxer::start()
         }
 
         if (avPacket->stream_index == m_context->videoDecoder->streamIndex()) {
-            m_context->videoDecoder->decodeAVPacket(avPacket) || stop();
+            if (!m_context->videoDecoder->decodeAVPacket(avPacket)) {
+                return stop();
+            }
         } else if (avPacket->stream_index == m_context->audioDecoder->streamIndex()) {
-            m_context->audioDecoder->decodeAVPacket(avPacket) || stop();
+            if (!m_context->audioDecoder->decodeAVPacket(avPacket)) {
+                return stop();
+            }
         } else {
             return 1; // Minimal sleep time
         }

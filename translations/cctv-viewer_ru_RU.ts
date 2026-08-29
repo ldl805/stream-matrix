@@ -4,32 +4,32 @@
 <context>
     <name>Context</name>
     <message>
-        <location filename="../src/context.cpp" line="11"/>
+        <location filename="../src/context.cpp" line="14"/>
         <source>Path to the config file.</source>
         <translation>Путь к файлу конфигурации.</translation>
     </message>
     <message>
-        <location filename="../src/context.cpp" line="12"/>
+        <location filename="../src/context.cpp" line="15"/>
         <source>Index of the current preset.</source>
         <translation>Индекс текущего пресета.</translation>
     </message>
     <message>
-        <location filename="../src/context.cpp" line="13"/>
+        <location filename="../src/context.cpp" line="16"/>
         <source>Force full-screen mode.</source>
         <translation>Принудительный полноэкранный режим.</translation>
     </message>
     <message>
-        <location filename="../src/context.cpp" line="14"/>
+        <location filename="../src/context.cpp" line="17"/>
         <source>Kiosk mode functionality.</source>
         <translation>Функционал режима киоска.</translation>
     </message>
     <message>
-        <location filename="../src/context.cpp" line="15"/>
+        <location filename="../src/context.cpp" line="18"/>
         <source>Log level [%1...%2].</source>
         <translation>Уровень логгирования [%1...%2].</translation>
     </message>
     <message>
-        <location filename="../src/context.cpp" line="43"/>
+        <location filename="../src/context.cpp" line="46"/>
         <source>StreamMatrix - high performance viewer and monitor for video streams.</source>
         <translation type="unfinished"></translation>
     </message>
@@ -113,23 +113,23 @@
         <translation type="unfinished"></translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="92"/>
-        <location filename="../src/RootWindow.qml" line="216"/>
+        <location filename="../src/RootWindow.qml" line="94"/>
+        <location filename="../src/RootWindow.qml" line="218"/>
         <source>Error reading configuration!</source>
         <translation>Ошибка чтения конфигурации!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="305"/>
+        <location filename="../src/RootWindow.qml" line="307"/>
         <source>Already running!</source>
         <translation>Уже запущено!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="307"/>
+        <location filename="../src/RootWindow.qml" line="309"/>
         <source>The application is already running!</source>
         <translation>Приложение уже запущено!</translation>
     </message>
     <message>
-        <location filename="../src/RootWindow.qml" line="308"/>
+        <location filename="../src/RootWindow.qml" line="310"/>
         <source>Go to the first instance and allow multiple instances of the app to run in Settings.</source>
         <translation>Перейдите к первому экземпляру и разрешите запуск нескольких экземпляров приложения в настройках.</translation>
     </message>

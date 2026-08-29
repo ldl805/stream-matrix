@@ -30,14 +30,21 @@ int QmlAVVideoBuffer::map(QAbstractVideoBuffer::MapMode mode, int *numBytes, int
 
     auto mapData = map(mode);
 
-    int i = 0;
-    for (*numBytes = 0; i < QMLAV_NUM_DATA_POINTERS; ++i) {
-        *numBytes += mapData.size[i];
-        bytesPerLine[i] = mapData.bytesPerLine[i];
-        data[i] = mapData.data[i];
+    int planesCount = 0;
+    *numBytes = 0;
+    for (int i = 0; i < QMLAV_NUM_DATA_POINTERS; ++i) {
+        if (mapData.data[i] && mapData.size[i] > 0) {
+            *numBytes += mapData.size[i];
+            bytesPerLine[i] = mapData.bytesPerLine[i];
+            data[i] = mapData.data[i];
+            planesCount = i + 1;
+        } else {
+            bytesPerLine[i] = 0;
+            data[i] = nullptr;
+        }
     }
 
-    return i;
+    return planesCount;
 }
 
 bool QmlAVVideoBuffer::planeSizes(int size[]) const

@@ -89,8 +89,7 @@ QString QmlAVDecoder::name() const
 bool QmlAVDecoder::decodeAVPacket(const AVPacketPtr &avPacket)
 {
     if (isOpen()) {
-        m_threadTask(this, avPacket);
-        return true;
+        return m_threadTask(this, avPacket);
     }
 
     return false;

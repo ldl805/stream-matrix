@@ -22,27 +22,49 @@ public:
     QmlAVInterruptCallback() {
         opaque = this;
         callback = [](void *opaque) -> int {
-            assert(opaque);
+            if (!opaque) return 1;
             auto cb = static_cast<QmlAVInterruptCallback *>(opaque);
-            return cb->isAVInterruptRequested() || (cb->m_expireTime > 0 && av_gettime_relative() > cb->m_expireTime);
+            if (cb->isAVInterruptRequested()) return 1;
+            int64_t expire = cb->m_expireTime.load(std::memory_order_relaxed);
+            if (expire > 0 && av_gettime_relative() > expire) return 1;
+            return 0;
         };
     }
 
-    void requestAVInterrupt() { m_avInterruptRequested.store(true, std::memory_order_relaxed); }
-    bool isAVInterruptRequested() const { return m_avInterruptRequested.load(std::memory_order_relaxed); }
+    QmlAVInterruptCallback(const QmlAVInterruptCallback &other) : AVIOInterruptCB() {
+        opaque = this;
+        callback = other.callback;
+        m_timeout.store(other.m_timeout.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        m_expireTime.store(other.m_expireTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        m_avInterruptRequested.store(other.m_avInterruptRequested.load(std::memory_order_relaxed), std::memory_order_relaxed);
+    }
 
-    // NOTE: Not thread safe!
+    QmlAVInterruptCallback &operator=(const QmlAVInterruptCallback &other) {
+        if (this != &other) {
+            opaque = this;
+            callback = other.callback;
+            m_timeout.store(other.m_timeout.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            m_expireTime.store(other.m_expireTime.load(std::memory_order_relaxed), std::memory_order_relaxed);
+            m_avInterruptRequested.store(other.m_avInterruptRequested.load(std::memory_order_relaxed), std::memory_order_relaxed);
+        }
+        return *this;
+    }
+
+    void requestAVInterrupt() { m_avInterruptRequested.store(true, std::memory_order_release); }
+    bool isAVInterruptRequested() const { return m_avInterruptRequested.load(std::memory_order_acquire); }
+
     void setTimeout(int64_t timeout) {
-        m_timeout = timeout;
+        m_timeout.store(timeout, std::memory_order_relaxed);
         resetTimer();
     }
     void resetTimer() {
-        m_expireTime = av_gettime_relative() + m_timeout;
+        int64_t t = m_timeout.load(std::memory_order_relaxed);
+        m_expireTime.store(t > 0 ? (av_gettime_relative() + t) : 0, std::memory_order_relaxed);
     }
 
 private:
-    int64_t m_timeout = 0;
-    int64_t m_expireTime = 0;
+    std::atomic<int64_t> m_timeout = 0;
+    std::atomic<int64_t> m_expireTime = 0;
     std::atomic<bool> m_avInterruptRequested = false;
 };
 
