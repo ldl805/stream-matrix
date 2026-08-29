@@ -26,8 +26,18 @@ if [ -z "$QT_QPA_PLATFORM" ]; then
     fi
 fi
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SCRIPT_SOURCE" ]; do
+    SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+    SCRIPT_SOURCE="$(readlink "$SCRIPT_SOURCE")"
+    [[ $SCRIPT_SOURCE != /* ]] && SCRIPT_SOURCE="$SCRIPT_DIR/$SCRIPT_SOURCE"
+done
+SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_SOURCE")" && pwd)"
+
 BINARY="$SCRIPT_DIR/build/stream-matrix"
+if [ ! -f "$BINARY" ] && [ -f "/usr/bin/stream-matrix" ]; then
+    BINARY="/usr/bin/stream-matrix"
+fi
 
 if [ ! -f "$BINARY" ]; then
     echo "StreamMatrix binary not found at $BINARY. Please build first." >&2
