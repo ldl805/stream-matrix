@@ -130,6 +130,7 @@ ApplicationWindow {
 
     Shortcut {
         sequence: "M"
+        context: Qt.ApplicationShortcut
         onActivated: {
             if (Utils.currentLayout().focusIndex >= 0) {
                 var item = Utils.currentModel().get(Utils.currentLayout().focusIndex);
@@ -147,16 +148,19 @@ ApplicationWindow {
     }
     Shortcut {
         sequence: "D"
+        context: Qt.ApplicationShortcut
         onActivated: {
             viewSettings.showDiagnostics = !viewSettings.showDiagnostics;
         }
     }
     Shortcut {
         sequence: "Alt+Right"
+        context: Qt.ApplicationShortcut
         onActivated: stackLayout.currentIndex = Math.min(stackLayout.currentIndex + 1, stackLayout.count - 1)
     }
     Shortcut {
         sequence: "Alt+Left"
+        context: Qt.ApplicationShortcut
         onActivated: stackLayout.currentIndex = Math.max(stackLayout.currentIndex - 1, 0)
     }
     // Shortcuts for the first 9 presets (Alt + 1, Alt + 2, ..., Alt + 9)
@@ -166,17 +170,20 @@ ApplicationWindow {
         Item {
             Shortcut {
                 sequence: "Alt+" + (index + 1)
+                context: Qt.ApplicationShortcut
                 onActivated: stackLayout.currentIndex = index
             }
         }
     }
     Shortcut {
         sequence: "Space"
+        context: Qt.ApplicationShortcut
         enabled: presetsSettings.carouselRunning
         onActivated: carouselTimer.paused = !carouselTimer.paused
     }
     Shortcut {
         sequences: ["F11", StandardKey.FullScreen]
+        context: Qt.ApplicationShortcut
         onActivated: toggleFullScreen()
         onActivatedAmbiguously: toggleFullScreen()
 
@@ -185,11 +192,13 @@ ApplicationWindow {
         }
     }
     Shortcut {
-        sequences: [StandardKey.Quit, StandardKey.Close, "Ctrl+Q", "Ctrl+W", "Alt+F4"]
+        sequences: [StandardKey.Quit, StandardKey.Close, "Ctrl+Q", "Ctrl+W", "Alt+F4", "q", "Q", "Ctrl+C"]
+        context: Qt.ApplicationShortcut
         onActivated: Qt.quit()
     }
     Shortcut {
         sequence: "Escape"
+        context: Qt.ApplicationShortcut
         enabled: Context.config.fullScreen
         onActivated: Context.config.fullScreen = false
     }

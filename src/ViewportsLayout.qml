@@ -281,10 +281,12 @@ FocusScope {
 
                     Keys.onPressed: {
                         var fullScreenKey = QT_TR_NOOP("F", "Shortcut");
+                        var handled = false;
                         if (event.text.toUpperCase() === fullScreenKey ||
                             event.text.toUpperCase() === qsTr(fullScreenKey)) {
                             fullScreen = (root.size.width > 1 && root.size.height > 1) ? !fullScreen : false;
                             d.selectionReset();
+                            handled = true;
                         }
 
                         function keyNavigationHandler(keyNavigationCallback) {
@@ -301,6 +303,7 @@ FocusScope {
                         case Qt.Key_Escape:
                             focus = false;
                             fullScreen = false;
+                            handled = true;
                             break;
                         case Qt.Key_Up:
                             function keyUpCallback(index) {
@@ -317,6 +320,7 @@ FocusScope {
                             }
 
                             keyNavigationHandler(keyUpCallback);
+                            handled = true;
                             break;
                         case Qt.Key_Down:
                             function keyDownCallback(index) {
@@ -333,6 +337,7 @@ FocusScope {
                             }
 
                             keyNavigationHandler(keyDownCallback);
+                            handled = true;
                             break;
                         case Qt.Key_Right:
                             function keyRightCallback(index) {
@@ -349,6 +354,7 @@ FocusScope {
                             }
 
                             keyNavigationHandler(keyRightCallback);
+                            handled = true;
                             break;
                         case Qt.Key_Left:
                             function keyLeftCallback(index) {
@@ -365,8 +371,11 @@ FocusScope {
                             }
 
                             keyNavigationHandler(keyLeftCallback);
+                            handled = true;
                             break;
                         }
+
+                        event.accepted = handled;
                     }
 
                     QtObject {
@@ -622,6 +631,10 @@ FocusScope {
                     model.get(i).avFormatOptions = layoutsCollectionSettings.toJSValue("defaultAVFormatOptions");
                 }
             }
+            event.accepted = true;
+            break;
+        default:
+            event.accepted = false;
             break;
         }
     }

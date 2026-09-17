@@ -5,6 +5,14 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-09-16
+
+### Fixed
+- **Global Key Event Interception for Quit Shortcuts**: Implemented `QuitShortcutFilter` installed at `QGuiApplication` level in C++ to intercept quit keystrokes (`Ctrl+Q`, `Ctrl+W`, `Ctrl+C`, `Alt+F4`, and `q`/`Q` outside text input controls) before any UI item can consume them, regardless of window focus state or Wayland/X11 surface hierarchy.
+- **QML Key Propagation**: Fixed `Keys.onPressed` in `ViewportsLayout.qml` (viewport item level and layout root) and `SideBar.qml` which were implicitly accepting all key events (`event.accepted = true` by default) and blocking shortcuts from receiving events whenever viewports or sidebar had active focus.
+- **Application-Scoped QML Shortcuts**: Upgraded shortcuts in `RootWindow.qml` to `Qt.ApplicationShortcut` context to ensure shortcuts trigger across the whole application lifecycle, and expanded quit sequences to include `Ctrl+Q`, `Ctrl+W`, `Ctrl+C`, `Alt+F4`, `q`, `Q`, `StandardKey.Quit`, and `StandardKey.Close`.
+- **POSIX Signal Handling**: Added async-signal-safe Unix signal socketpair handling for `SIGINT` (terminal Ctrl+C) and `SIGTERM` ensuring clean event-loop shutdown and resource cleanup.
+
 ## [1.0.1] - 2026-08-29
 
 ### Fixed

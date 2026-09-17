@@ -39,6 +39,9 @@ FocusScope {
     Keys.onPressed: {
         if (event.key === Qt.Key_Escape && state === SideBar.Popup) {
             state = SideBar.Compact;
+            event.accepted = true;
+        } else {
+            event.accepted = false;
         }
     }
     Component.onCompleted: {
