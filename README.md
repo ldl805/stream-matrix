@@ -116,11 +116,12 @@ Or run directly from the build directory using the included launcher:
 
 ## ⚙️ Configuration & Hardware Acceleration
 
-### Recommended Raspberry Pi 5 & 4 FFmpeg Options
-In **Settings → Viewport → Default FFmpeg options**, the following defaults are pre-configured for low latency:
+### Recommended RTSP FFmpeg Options
+In **Settings → Viewport → Default FFmpeg options**, the following defaults are pre-configured for low latency and robust streaming:
 ```text
--hwaccel drm -rtsp_transport tcp -fflags nobuffer -flags low_delay
+-rtsp_transport tcp -fflags nobuffer -flags low_delay -stimeout 5000000 -timeout 5000000 -buffer_size 1048576
 ```
+*(Note for Raspberry Pi 5: The BCM2712 CPU handles H.264 streams using multi-threaded NEON software decode; hardware decoding on Pi 5 is reserved for HEVC/H.265. Omit `-hwaccel drm` for H.264 feeds).*
 
 ### Common Camera RTSP Formats
 - **Main Stream**: `rtsp://username:password@192.168.1.50:554/stream1`

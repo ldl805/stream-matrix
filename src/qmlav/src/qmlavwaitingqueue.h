@@ -13,7 +13,8 @@ public:
     QmlAVWaitingQueue()
         : m_interrupted(false)
         , m_producerLimit(0) // Unlim
-        , m_consumerLimit(1) { }
+        , m_consumerLimit(1)
+        , m_dropOnOverflow(false) { }
     virtual ~QmlAVWaitingQueue()
     {
         requestInterrupt();
@@ -26,6 +27,7 @@ public:
         m_interrupted = other.m_interrupted.load();
         m_producerLimit = other.m_producerLimit;
         m_consumerLimit = other.m_consumerLimit;
+        m_dropOnOverflow = other.m_dropOnOverflow;
     }
 
     QmlAVWaitingQueue &operator=(const QmlAVWaitingQueue &other) = delete;
@@ -36,6 +38,7 @@ public:
             m_interrupted = other.m_interrupted.load();
             m_producerLimit = other.m_producerLimit;
             m_consumerLimit = other.m_consumerLimit;
+            m_dropOnOverflow = other.m_dropOnOverflow;
         }
         return *this;
     }
@@ -45,11 +48,15 @@ public:
         {
             std::unique_lock<std::mutex> lock(m_mutex);
 
-            m_producerCond.wait(lock, [&] {
-                return m_interrupted.load(std::memory_order_relaxed) ||
-                       m_producerLimit == 0 ||
-                       m_queue.size() < m_producerLimit;
-            });
+            if (m_dropOnOverflow && m_producerLimit > 0 && m_queue.size() >= m_producerLimit) {
+                m_queue.pop();
+            } else {
+                m_producerCond.wait(lock, [&] {
+                    return m_interrupted.load(std::memory_order_relaxed) ||
+                           m_producerLimit == 0 ||
+                           m_queue.size() < m_producerLimit;
+                });
+            }
 
             if (m_interrupted.load(std::memory_order_relaxed)) {
                 return false;
@@ -152,6 +159,16 @@ public:
         m_consumerCond.notify_all();
     }
 
+    void setDropOnOverflow(bool drop) {
+        std::scoped_lock lock(m_mutex);
+        m_dropOnOverflow = drop;
+    }
+
+    bool dropOnOverflow() const {
+        std::scoped_lock lock(m_mutex);
+        return m_dropOnOverflow;
+    }
+
     bool isEmpty() const {
         std::scoped_lock lock(m_mutex);
         return m_queue.empty();
@@ -171,6 +188,7 @@ private:
     std::queue<T> m_queue;
     size_t m_producerLimit;
     size_t m_consumerLimit;
+    bool m_dropOnOverflow;
 };
 
 #endif // QMLAVWAITINGQUEUE_H

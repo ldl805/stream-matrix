@@ -30,7 +30,12 @@ QmlAVDemuxer::~QmlAVDemuxer()
     m_loaderThread.requestInterrupt(true);
     m_demuxerThread.requestInterrupt(true);
 
-    // 3. Important! Serialization point for decoders dtor's
+    // 3. Immediately close RTSP input context and socket to send TEARDOWN to camera
+    if (m_context && m_context->avFormatCtx) {
+        avformat_close_input(&m_context->avFormatCtx);
+    }
+
+    // 4. Important! Serialization point for decoders dtor's
     if (m_context) {
         if (m_context->videoDecoder) {
             m_context->videoDecoder->requestInterrupt(true);

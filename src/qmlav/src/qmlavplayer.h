@@ -103,6 +103,7 @@ private:
     QTimer m_metricsTimer;
 
     QElapsedTimer m_fpsTimer;
+    QElapsedTimer m_timeSinceLastVideoFrame;
     int m_presentedFramesCount;
     int m_currentBackoffMs;
 

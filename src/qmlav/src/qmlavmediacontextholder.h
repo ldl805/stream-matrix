@@ -22,7 +22,9 @@ public:
         delete videoDecoder;
         delete audioDecoder;
 
-        avformat_close_input(&avFormatCtx);
+        if (avFormatCtx) {
+            avformat_close_input(&avFormatCtx);
+        }
     }
     
     AVFormatContext *avFormatCtx = nullptr;

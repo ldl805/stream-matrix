@@ -5,6 +5,23 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.3] - 2026-10-01
+
+### Fixed
+- **RTSP Demuxer Queue Stalls & Choppiness**: Added `dropOnOverflow` ring buffer mode to `QmlAVWaitingQueue` so the demuxer thread drops the oldest unrendered packet rather than blocking when video processing experiences transient slowdowns. Increased default video packet queue capacity from 128 to 256 packets and frame buffer from 16 to 24 frames.
+- **RTSP 404/453 Reconnection Failures**: Added immediate `avformat_close_input` in `QmlAVDemuxer` destructor to promptly send RTSP `TEARDOWN` and release server sockets before creating a new connection, preventing cameras from rejecting reconnect attempts due to session exhaustion.
+- **Single-Packet Lockstep Decode Jitter**: Restructured the real-time decoding loop in `QmlAVDecoder` to eagerly drain all decoded frames immediately after sending a packet (`avcodec_receive_frame` loop) instead of waiting for the subsequent packet.
+- **Multi-Threaded H.264 Software Decoding on Pi 5 / ARM**: Configured FFmpeg multi-threaded slice and frame decoding (`thread_count = 2`, `thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME`) for software H.264 streams, utilizing Raspberry Pi 5 quad-core ARM NEON acceleration and preventing core saturation.
+- **Frozen Stream Auto-Recovery**: Integrated a 7-second stalled stream watchdog in `QmlAVPlayer::updateMetrics()` that triggers an automatic soft reconnect if no new video frames arrive from an active stream.
+- **Unbounded Audio Queue Memory Growth**: Capped `m_frames` queue in `QmlAVAudioIODevice` to 50 frames and avoided enqueuing audio buffers when muted (`volume <= 0.0`), preventing memory leaks on video-only monitoring feeds.
+- **FFmpeg 7.x Channel Layout Memory Leak**: Added explicit `av_channel_layout_uninit` in `QmlAVResampler` destructor and prior to layout copies.
+- **Stale Context Pointer Segfaults**: Cached stream properties (`timeBase`, `startTime`, `sampleAspectRatio`) in `QmlAVDecoder` so PTS calculations in `QmlAVFrame` do not dereference `AVStream` pointers after demuxer teardown.
+- **Default FFmpeg Network Options**: Updated default RTSP network parameters with 5-second socket timeouts (`-stimeout 5000000 -timeout 5000000`) and a 1MB socket buffer (`-buffer_size 1048576`), removing invalid hardware accel flags for CPU-decoded H.264.
+
+### Added
+- **Automated GitHub Releases & Multi-Arch Packaging**: Added CPack support generating Debian `.deb` and `.tar.gz` distribution packages with architecture identification (`arm64`, `x86_64`), and added `.github/workflows/release.yml` for automated GitHub Releases on version tags.
+- **CMake Test Integration**: Enabled CTest at repository root so all unit tests run via `ctest --test-dir build`.
+
 ## [1.0.2] - 2026-09-16
 
 ### Fixed

@@ -79,10 +79,12 @@ ApplicationWindow {
         property string models
         property bool presetIndicator: true
         property string defaultAVFormatOptions: JSON.stringify({
-            "hwaccel": "drm",
             "rtsp_transport": "tcp",
             "fflags": "nobuffer",
-            "flags": "low_delay"
+            "flags": "low_delay",
+            "stimeout": "5000000",
+            "timeout": "5000000",
+            "buffer_size": "1048576"
         })
 
         function toJSValue(key) {

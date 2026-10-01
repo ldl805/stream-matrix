@@ -46,6 +46,7 @@ void QmlAVPlayer::play()
     logDebug() << "play()";
 
     cancelReconnect();
+    m_timeSinceLastVideoFrame.restart();
 
     if (load()) {
         m_demuxer->start();
@@ -65,6 +66,7 @@ void QmlAVPlayer::stop()
     logDebug() << "stop()";
 
     m_metricsTimer.stop();
+    m_timeSinceLastVideoFrame.invalidate();
 
     if (m_demuxer) {
         disconnect(m_demuxer, nullptr, this, nullptr);
@@ -145,6 +147,7 @@ void QmlAVPlayer::frameHandler(const std::shared_ptr<QmlAVFrame> frame)
                         stop();
                     } else {
                         m_presentedFramesCount++;
+                        m_timeSinceLastVideoFrame.restart();
                         if (m_reconnecting) {
                             cancelReconnect();
                         }
@@ -153,6 +156,10 @@ void QmlAVPlayer::frameHandler(const std::shared_ptr<QmlAVFrame> frame)
                 }
             }
         } else if (frame->type() == QmlAVFrame::TypeAudio) {
+            if (m_muted || m_volume <= 0.0) {
+                return;
+            }
+
             auto af = std::static_pointer_cast<QmlAVAudioFrame>(frame);
 
             m_audioIODevice.enqueue(af);
@@ -354,6 +361,15 @@ void QmlAVPlayer::reset()
 
 void QmlAVPlayer::updateMetrics()
 {
+    // Stalled video feed watchdog: if video is active and no video frame was presented for > 7s, trigger reconnect
+    if (m_playbackState == QMediaPlayer::PlayingState && m_hasVideo && m_autoReconnect && !m_reconnecting) {
+        if (m_timeSinceLastVideoFrame.isValid() && m_timeSinceLastVideoFrame.hasExpired(7000)) {
+            logWarning() << QString("Stalled video feed detected (no frames for 7s). Reconnecting: %1").arg(m_source.toString());
+            scheduleReconnect();
+            return;
+        }
+    }
+
     qint64 elapsed = m_fpsTimer.restart();
     if (elapsed > 0) {
         double currentFps = (m_presentedFramesCount * 1000.0) / elapsed;

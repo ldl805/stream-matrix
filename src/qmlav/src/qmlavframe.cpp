@@ -45,13 +45,13 @@ QmlAVFrame::QmlAVFrame(QmlAVFrame &&other) noexcept
 
 double QmlAVFrame::timeBaseUs() const
 {
-    return av_q2d(decoder()->stream()->time_base) * AV_TIME_BASE;
+    return av_q2d(decoder()->timeBase()) * AV_TIME_BASE;
 }
 
 // PTS of the first frame of the stream in presentation order
 int64_t QmlAVFrame::startPts() const
 {
-    auto startPts = decoder()->stream()->start_time;
+    auto startPts = decoder()->startTime();
     if (startPts != AV_NOPTS_VALUE) {
         return startPts * timeBaseUs();
     }
@@ -86,12 +86,10 @@ AVRational QmlAVVideoFrame::sampleAspectRatio() const
     AVRational sar = {1, 1};
 
     if (isValid()) {
-        auto codecpar = decoder()->stream()->codecpar;
-
         if (avFrame()->sample_aspect_ratio.num) {
             sar = avFrame()->sample_aspect_ratio;
-        } else if (codecpar->sample_aspect_ratio.num) {
-            sar = codecpar->sample_aspect_ratio;
+        } else if (decoder()->sampleAspectRatio().num) {
+            sar = decoder()->sampleAspectRatio();
         }
     }
 

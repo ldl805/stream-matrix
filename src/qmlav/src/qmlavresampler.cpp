@@ -12,6 +12,9 @@ QmlAVResampler::QmlAVResampler()
 QmlAVResampler::~QmlAVResampler()
 {
     swr_free(&m_swrCtx);
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+    av_channel_layout_uninit(&m_channelLayout);
+#endif
 }
 
 /*
@@ -116,6 +119,9 @@ bool QmlAVResampler::initCachedContext(const QmlAVAudioFrame &srcFrame)
             return false;
         }
 
+#if LIBAVUTIL_VERSION_INT >= AV_VERSION_INT(57, 24, 100)
+        av_channel_layout_uninit(&m_channelLayout);
+#endif
         if (av_channel_layout_copy(&m_channelLayout, &channelLayout) < 0) {
             return false;
         }

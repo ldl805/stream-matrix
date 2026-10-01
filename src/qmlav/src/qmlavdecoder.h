@@ -61,6 +61,12 @@ public:
     QString name() const;
     const AVStream *stream() const { return m_avStream; }
     int streamIndex() const { return m_avStream ? m_avStream->index : -1; }
+    AVRational timeBase() const { return m_timeBase; }
+    int64_t startTime() const { return m_startTime; }
+    AVRational sampleAspectRatio() const { return m_sampleAspectRatio; }
+
+    void setDropOnOverflow(bool drop) { m_threadTask.argsQueue()->setDropOnOverflow(drop); }
+    void setPacketQueueLimit(size_t limit) { m_threadTask.argsQueue()->setProducerLimit(limit); }
 
     bool decodeAVPacket(const AVPacketPtr &avPacket);
 
@@ -97,6 +103,9 @@ private:
     QmlAVMediaContextHolder *m_context;
 
     const AVStream *m_avStream;
+    AVRational m_timeBase = {0, 1};
+    int64_t m_startTime = AV_NOPTS_VALUE;
+    AVRational m_sampleAspectRatio = {0, 1};
 
     QmlAVThreadTask<decltype(&QmlAVDecoder::worker)> m_threadTask;
     QmlAVThreadLiveController<QmlAVLoopController> m_thread;

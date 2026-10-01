@@ -1,0 +1,92 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build & Package (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            arch: x86_64
+          - os: ubuntu-24.04-arm
+            arch: arm64
+    continue-on-error: ${{ matrix.arch == 'arm64' }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          build-essential \
+          cmake \
+          pkg-config \
+          libgtest-dev \
+          libgl1-mesa-dev \
+          libx11-dev \
+          qtbase5-dev \
+          qtdeclarative5-dev \
+          qtmultimedia5-dev \
+          qttools5-dev \
+          qttools5-dev-tools \
+          libavformat-dev \
+          libavcodec-dev \
+          libavutil-dev \
+          libswscale-dev \
+          libswresample-dev \
+          libavdevice-dev \
+          libva-dev \
+          dpkg-dev
+
+    - name: Configure CMake
+      run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build -j$(nproc)
+
+    - name: Run Tests
+      run: ctest --test-dir build --output-on-failure
+
+    - name: Package with CPack
+      run: |
+        cd build
+        cpack -G "TGZ;DEB"
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages-${{ matrix.arch }}
+        path: |
+          build/*.tar.gz
+          build/*.deb
+
+  release:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download all packages
+      uses: actions/download-artifact@v4
+      with:
+        path: release_packages
+        merge-multiple: true
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          release_packages/*.tar.gz
+          release_packages/*.deb
+        generate_release_notes: true

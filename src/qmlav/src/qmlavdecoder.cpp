@@ -10,8 +10,9 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 }
 
-#define PACKETS_LIMIT 64
-#define VIDEO_FRAMES_LIMIT 8
+#define VIDEO_PACKETS_LIMIT 256
+#define AUDIO_PACKETS_LIMIT 64
+#define VIDEO_FRAMES_LIMIT 24
 #define AUDIO_FRAMES_LIMIT 32
 
 QmlAVDecoder::QmlAVDecoder(QmlAVMediaContextHolder *context, Type type)
@@ -24,7 +25,7 @@ QmlAVDecoder::QmlAVDecoder(QmlAVMediaContextHolder *context, Type type)
     qRegisterMetaType<std::shared_ptr<QmlAVFrame>>();
 
     m_thread = m_threadTask.getLiveController();
-    m_threadTask.argsQueue()->setProducerLimit(PACKETS_LIMIT);
+    m_threadTask.argsQueue()->setProducerLimit(m_type == TypeVideo ? VIDEO_PACKETS_LIMIT : AUDIO_PACKETS_LIMIT);
 }
 
 QmlAVDecoder::~QmlAVDecoder()
@@ -55,6 +56,12 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
             return false;
         }
 
+        if (m_type == TypeVideo) {
+            // Enable multi-threaded slice & frame decoding for software video on multi-core / Pi 5
+            m_avCodecCtx->thread_count = 2;
+            m_avCodecCtx->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
+        }
+
         if (!initVideoDecoder(avOptions)) {
             return false;
         }
@@ -69,6 +76,11 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         logDebug() << "avcodec_open2() options ignored: " << QmlAV::Quote << opts.toString();
 
         m_avStream = avStream;
+        m_timeBase = avStream->time_base;
+        m_startTime = avStream->start_time;
+        if (avStream->codecpar) {
+            m_sampleAspectRatio = avStream->codecpar->sample_aspect_ratio;
+        }
 
         return true;
     }
@@ -97,20 +109,72 @@ bool QmlAVDecoder::decodeAVPacket(const AVPacketPtr &avPacket)
 
 QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
 {
-    AVFramePtr avFrame;
-
     assert(m_avCodecCtx);
 
-    // Get available frame from the decoder
+    if (m_context && m_context->clock.realTime) {
+        // Real-time RTSP/network mode: send packet and immediately drain all ready frames
+        int ret = avcodec_send_packet(m_avCodecCtx, avPacket);
+        if (ret == AVERROR(EAGAIN)) {
+            // Buffer full: drain frames first, then resend
+            while (true) {
+                AVFramePtr avFrame;
+                int r = avcodec_receive_frame(m_avCodecCtx, avFrame);
+                if (r < 0) break;
+                if (m_frameQueueLimit.addValue(frameQueueLength())) {
+                    auto f = makeFrame(avFrame, m_context->shared_from_this());
+                    if (f && f->isValid()) {
+                        m_counters.framesDecoded++;
+                        m_context->demuxer->frameHandler(f);
+                    }
+                } else {
+                    m_counters.framesDiscarded++;
+                }
+            }
+            ret = avcodec_send_packet(m_avCodecCtx, avPacket);
+        }
+
+        if (ret < 0) {
+            if (ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
+                logWarning() << QString("Unable send packet to decoder: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+            }
+        } else {
+            m_counters.packetsDecoded++;
+        }
+
+        while (true) {
+            AVFramePtr avFrame;
+            int r = avcodec_receive_frame(m_avCodecCtx, avFrame);
+            if (r == AVERROR(EAGAIN) || r == AVERROR_EOF) {
+                break;
+            }
+            if (r < 0) {
+                logWarning() << QString("Unable to read decoded frame: \"%1\" (%2)").arg(av_err2str(r)).arg(r);
+                break;
+            }
+
+            if (m_frameQueueLimit.addValue(frameQueueLength())) {
+                auto f = makeFrame(avFrame, m_context->shared_from_this());
+                if (f && f->isValid()) {
+                    m_counters.framesDecoded++;
+                    m_context->demuxer->frameHandler(f);
+                }
+            } else {
+                m_counters.framesDiscarded++;
+                logDebug() << QString("Exceeding %1 frame queue limit: ").arg(typeName()) << m_frameQueueLimit;
+            }
+        }
+
+        return QmlAVLoopController::Continue;
+    }
+
+    // Non-realtime mode (local files with presentation time sync)
+    AVFramePtr avFrame;
     int ret = avcodec_receive_frame(m_avCodecCtx, avFrame);
     if (ret < 0) {
-        // Those two return values are special and mean there is no output
-        // frame available, but there were no errors during decoding.
         if (ret != AVERROR_EOF && ret != AVERROR(EAGAIN)) {
             logWarning() << QString("Unable to read decoded frame: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
         }
 
-        // Submit the packet to the decoder
         ret = avcodec_send_packet(m_avCodecCtx, avPacket);
         if (ret < 0) {
             logWarning() << QString("Unable send packet to decoder: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
@@ -121,17 +185,13 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
         return QmlAVLoopController::Continue;
     } else {
         if (m_frameQueueLimit.addValue(frameQueueLength())) {
-
             auto f = makeFrame(avFrame, m_context->shared_from_this());
             if (f && f->isValid()) {
                 m_counters.framesDecoded++;
                 m_context->demuxer->frameHandler(f);
 
-                if (!m_context->clock.realTime) {
-                    // Primitive syncing for local playback
-                    auto presentTime = m_context->demuxer->startTime() + f->pts() - f->startPts();
-                    return QmlAVLoopController(QmlAVLoopController::Retry, presentTime - Clock::now());
-                }
+                auto presentTime = m_context->demuxer->startTime() + f->pts() - f->startPts();
+                return QmlAVLoopController(QmlAVLoopController::Retry, presentTime - Clock::now());
             }
         } else {
             m_counters.framesDiscarded++;
@@ -143,8 +203,10 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
 }
 
 QmlAVVideoDecoder::QmlAVVideoDecoder(QmlAVMediaContextHolder *context)
-    : QmlAVDecoder(context)
+    : QmlAVDecoder(context, TypeVideo)
 {   
+    setPacketQueueLimit(VIDEO_PACKETS_LIMIT);
+    setDropOnOverflow(true);
     m_frameQueueLimit.setLimit(VIDEO_FRAMES_LIMIT);
 }
 
@@ -226,8 +288,10 @@ const std::shared_ptr<QmlAVFrame> QmlAVVideoDecoder::makeFrame(const AVFramePtr 
 }
 
 QmlAVAudioDecoder::QmlAVAudioDecoder(QmlAVMediaContextHolder *context)
-    : QmlAVDecoder(context)
+    : QmlAVDecoder(context, TypeAudio)
 {
+    setPacketQueueLimit(AUDIO_PACKETS_LIMIT);
+    setDropOnOverflow(true);
     m_frameQueueLimit.setLimit(AUDIO_FRAMES_LIMIT);
 }
 

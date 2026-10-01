@@ -15,6 +15,10 @@ QmlAVAudioIODevice::~QmlAVAudioIODevice()
 void QmlAVAudioIODevice::enqueue(const std::shared_ptr<QmlAVAudioFrame> frame)
 {
     std::lock_guard<std::mutex> lock(m_mutex);
+    // Keep at most 50 audio frames (~1-2 seconds) to prevent unbounded memory growth if device is suspended/unread
+    while (m_frames.size() >= 50) {
+        m_frames.pop_front();
+    }
     m_frames.push_back(frame);
 }
 
