@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="1.0.4" date="2026-10-02">
+      <description>
+        <p>Flatpak and Flathub packaging, AppStream 1.0 metadata, and repository URL updates.</p>
+      </description>
+    </release>
     <release version="1.0.3" date="2026-10-01">
       <description>
         <p>RTSP streaming stability improvements, non-blocking queue ring-buffer, multi-threaded NEON decoding, and reconnect watchdog.</p>

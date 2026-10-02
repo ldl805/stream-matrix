@@ -5,6 +5,16 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-10-02
+
+### Added
+- **Flatpak & Flathub Packaging**: Added Flatpak manifest `org.streammatrix.StreamMatrix.yaml` targeting KDE Application Platform 5.15-25.08 with sandboxed network, Wayland/X11 display, PulseAudio/PipeWire audio, and DRI hardware acceleration.
+- **AppStream 1.0 Metadata**: Added validated `org.streammatrix.StreamMatrix.metainfo.xml` for Linux software centers.
+- **Freedesktop Desktop Entry**: Added `org.streammatrix.StreamMatrix.desktop` and scalable hicolor icon installation rules.
+
+### Fixed
+- **Sidebar GitHub Link**: Updated repository link on the sidebar logo from upstream cctv-viewer to `ldl805/stream-matrix`.
+
 ## [1.0.3] - 2026-10-01
 
 ### Fixed
