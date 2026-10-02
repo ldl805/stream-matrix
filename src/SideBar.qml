@@ -194,7 +194,7 @@ FocusScope {
                                 }
 
                                 Text {
-                                    text: "<a href=\"https://github.com/iEvgeny/cctv-viewer\"><img src=\"qrc:/images/github.svg\" width=\"180\"></a>"
+                                    text: "<a href=\"https://github.com/ldl805/stream-matrix\"><img src=\"qrc:/images/github.svg\" width=\"180\"></a>"
                                     color: "white"
                                     font.pointSize: rootWindow.font.pointSize * 1.05
                                     textFormat: Text.RichText
