@@ -25,5 +25,7 @@ modules:
     config-opts:
       - -DCMAKE_BUILD_TYPE=Release
     sources:
-      - type: dir
-        path: .
+      - type: git
+        url: https://github.com/ldl805/stream-matrix.git
+        tag: v1.0.4
+        commit: eda02cb1c6f8caad6dbc11a1a69b4a8467a9fe4a
