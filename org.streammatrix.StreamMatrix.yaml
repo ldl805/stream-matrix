@@ -1,0 +1,29 @@
+app-id: org.streammatrix.StreamMatrix
+runtime: org.kde.Platform
+runtime-version: '5.15-25.08'
+sdk: org.kde.Sdk
+command: stream-matrix
+
+finish-args:
+  # Network access for RTSP/RTMP/HTTP video streams
+  - --share=network
+  - --share=ipc
+  # Display servers (Wayland and X11 fallback)
+  - --socket=wayland
+  - --socket=fallback-x11
+  # Hardware-accelerated GPU rendering
+  - --device=dri
+  # Audio playback (PulseAudio / PipeWire)
+  - --socket=pulseaudio
+  # Persistent user configuration
+  - --filesystem=xdg-config/StreamMatrix:create
+
+modules:
+  - name: stream-matrix
+    buildsystem: cmake
+    builddir: true
+    config-opts:
+      - -DCMAKE_BUILD_TYPE=Release
+    sources:
+      - type: dir
+        path: .

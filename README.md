@@ -112,6 +112,25 @@ Or run directly from the build directory using the included launcher:
 ./run.sh
 ```
 
+### Flatpak Build & Run
+
+To build and run StreamMatrix as a universal, sandboxed Flatpak package:
+
+```bash
+# 1. Install flatpak and flatpak-builder
+sudo apt install -y flatpak flatpak-builder
+
+# 2. Add Flathub and install the KDE 5.15 runtime & SDK
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install -y flathub org.kde.Platform//5.15-25.08 org.kde.Sdk//5.15-25.08
+
+# 3. Build and install locally
+flatpak-builder --user --install --force-clean build-flatpak org.streammatrix.StreamMatrix.yaml
+
+# 4. Run StreamMatrix
+flatpak run org.streammatrix.StreamMatrix
+```
+
 ---
 
 ## ⚙️ Configuration & Hardware Acceleration

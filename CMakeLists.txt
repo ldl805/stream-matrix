@@ -171,7 +171,11 @@ if (UNIX AND NOT ANDROID)
     include(GNUInstallDirs)
     install(TARGETS stream-matrix DESTINATION ${CMAKE_INSTALL_BINDIR})
     install(FILES "images/stream-matrix.svg" DESTINATION "${CMAKE_INSTALL_DATADIR}/pixmaps")
-    install(FILES "stream-matrix.desktop" DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+    install(FILES "images/stream-matrix.svg"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps"
+            RENAME "org.streammatrix.StreamMatrix.svg")
+    install(FILES "stream-matrix.desktop" "org.streammatrix.StreamMatrix.desktop" DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+    install(FILES "org.streammatrix.StreamMatrix.metainfo.xml" DESTINATION "${CMAKE_INSTALL_DATADIR}/metainfo")
 
     set(CPACK_PACKAGE_NAME "stream-matrix")
     set(CPACK_PACKAGE_VENDOR "StreamMatrix")

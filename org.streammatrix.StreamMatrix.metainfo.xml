@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.streammatrix.StreamMatrix</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-or-later</project_license>
+  <name>StreamMatrix</name>
+  <summary>High-performance video matrix viewer for live RTSP camera feeds</summary>
+
+  <description>
+    <p>
+      StreamMatrix is a lightweight, high-performance video matrix application designed
+      for viewing and monitoring multiple live RTSP, RTMP, and HTTP video streams simultaneously.
+    </p>
+    <p>Features include:</p>
+    <ul>
+      <li>Optimized real-time H.264 decoding with multi-threaded slice acceleration</li>
+      <li>Customizable grid layouts with digital pan/zoom and preset cycling</li>
+      <li>Dual-profile sub-stream switching for low-bandwidth multi-camera monitoring</li>
+      <li>Automated reconnection watchdog for dropped or stalled feeds</li>
+      <li>Live stream diagnostics HUD (FPS, resolution, bitrate, codec)</li>
+      <li>Native Wayland and X11 display server support</li>
+    </ul>
+  </description>
+
+  <launchable type="desktop-id">org.streammatrix.StreamMatrix.desktop</launchable>
+
+  <url type="homepage">https://github.com/ldl805/stream-matrix</url>
+  <url type="bugtracker">https://github.com/ldl805/stream-matrix/issues</url>
+  <url type="vcs-browser">https://github.com/ldl805/stream-matrix</url>
+
+  <developer id="org.streammatrix">
+    <name>StreamMatrix Team</name>
+  </developer>
+
+  <provides>
+    <binary>stream-matrix</binary>
+  </provides>
+
+  <releases>
+    <release version="1.0.3" date="2026-10-01">
+      <description>
+        <p>RTSP streaming stability improvements, non-blocking queue ring-buffer, multi-threaded NEON decoding, and reconnect watchdog.</p>
+      </description>
+    </release>
+    <release version="1.0.2" date="2026-09-16"/>
+    <release version="1.0.1" date="2026-08-29"/>
+    <release version="1.0.0" date="2026-08-24"/>
+  </releases>
+
+  <content_rating type="oars-1.1"/>
+</component>
