@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="1.1" date="2026-10-04">
+      <description>
+        <p>Interactive retry button confirmation, live reconnection status and countdowns, FFmpeg error diagnostics, and updated blue branding.</p>
+      </description>
+    </release>
     <release version="1.0.4" date="2026-10-02">
       <description>
         <p>Flatpak and Flathub packaging, AppStream 1.0 metadata, and repository URL updates.</p>

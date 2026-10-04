@@ -5,6 +5,17 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1] - 2026-10-04
+
+### Added
+- **Interactive Reconnect Confirmation**: Instant tactile and visual feedback on the "Retry Now" button: hover highlights, pointing hand cursor, smooth scale compression, active `"Retrying..."` working state with animated spinner, and click debouncing.
+- **Live Reconnection Status Updates**: Real-time status messaging during reconnection attempts, displaying active phases (`"Connecting (attempt N)..."`, `"Attempting connection to stream..."`) and live second-by-second countdowns (`"Retrying in Xs (attempt N)..."`) during exponential backoff.
+- **Detailed Socket & FFmpeg Error Diagnostics**: Captured low-level socket, protocol, and timeout errors (e.g. `"Connection refused"`, `"Connection timed out"`, `"Server returned 404 Not Found"`, `"No route to host"`), displayed directly on the stream error overlay.
+- **New Blue Icon Branding**: Redesigned application icon and branding with a sleek blue color palette matching the StreamMatrix interface styling.
+
+### Fixed
+- **Reconnection State Preservation**: Fixed an issue where manual retry destroyed the reconnection overlay prematurely and left a blank screen; retry attempts now cleanly preserve reconnect state until live video frames arrive.
+
 ## [1.0.4] - 2026-10-02
 
 ### Added

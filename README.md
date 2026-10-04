@@ -32,10 +32,15 @@ We extend our sincere gratitude to Evgeny for establishing the foundational arch
 
 ### 📊 Diagnostics & Stream Health
 - **Live Stream Diagnostics HUD**: Press <kbd>D</kbd> to toggle an on-screen HUD displaying real-time **FPS**, **Resolution**, **Video Codec**, **Hardware Acceleration status `[HW]`**, and **Bitrate**.
-- **Auto-Reconnect Watchdog**: Automatically detects dropped feeds or network stalls and reconnects using exponential backoff without crashing or freezing. Includes an interactive on-screen "Retry" action.
+- **Interactive Reconnection & Retry Status Screen**:
+  - **Tactile Button Confirmation**: Clicking the "Retry Now" button provides instantaneous visual feedback—transforming into an active `"Retrying..."` state with an animated spinner, debounced to prevent duplicate reconnection storms.
+  - **Live Progress & Backoff Countdown**: The reconnect overlay keeps you informed at every stage, showing active connection attempts (`"Connecting (attempt N)..."`, `"Attempting connection to stream..."`) and a real-time second-by-second countdown (`"Retrying in Xs (attempt N)..."`) during exponential backoff.
+  - **Detailed Connection Error Diagnostics**: Unveils the exact root cause behind feed failures directly from FFmpeg (e.g., `"Error: Connection refused"`, `"Error: Connection timed out"`, `"Error: Server returned 404 Not Found"`, `"Error: No route to host"`).
+- **Auto-Reconnect Watchdog**: Automatically detects dropped feeds or frozen video streams (watchdog triggers after 7s without frames) and executes exponential backoff recovery without freezing the UI or blocking worker threads.
 - **Dual-Profile Resolution Switching**: Configure a high-resolution main stream (`URL`) and low-bandwidth sub-stream (`Sub-Stream URL`) per camera. The grid automatically renders lightweight sub-streams and seamlessly elevates to full resolution upon double-clicking into full-screen.
 
 ### 🖥️ Modernized UI & System Integration
+- **Unified Blue Branding**: Clean, modern blue application icon and UI accents designed for high contrast and clarity on both desktop Linux and wall-mounted monitoring displays.
 - **Quote-Aware FFmpeg Parser**: Tokenizer supports complex arguments and quoted options (e.g. `-rtsp_transport tcp -fflags nobuffer`).
 - **Multi-User Safe**: Instance locking uses user-isolated runtime paths (`$XDG_RUNTIME_DIR`), allowing multiple users to run isolated instances concurrently.
 - **Smart Wayland/X11 Launcher**: Automatically detects active display sockets when launched from desktop shortcuts, systemd services, or SSH.
