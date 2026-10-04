@@ -219,8 +219,8 @@ FocusScope {
 
                             PropertyChanges {
                                 target: viewport
-                                // HACK: Вводим зависимость от размера container для того,
-                                // чтобы инициировать пересчет позиции viewport при изменении размера GridLayout.
+                                // HACK: Introduce dependency on container size in order to
+                                // trigger recalculation of viewport position when GridLayout size changes.
                                 x: container.width ? -container.mapToItem(layout, 0, 0).x : 0
                                 y: container.height ? -container.mapToItem(layout, 0, 0).y : 0
                                 width: layout.width

@@ -2,9 +2,7 @@
 Type=Application
 Name=StreamMatrix
 GenericName=Multi-Stream Video Matrix Viewer
-GenericName[ru]=Матричный просмотрщик видеопотоков
 Comment=High-performance live RTSP and camera stream matrix viewer
-Comment[ru]=Высокопроизводительный просмотрщик видеопотоков видеонаблюдения
 Icon=org.streammatrix.StreamMatrix
 Exec=stream-matrix
 Terminal=false

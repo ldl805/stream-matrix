@@ -185,10 +185,9 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
     QTranslator translator;
     const QString locale = QLocale::system().name();
-    if (!translator.load(QLatin1String("stream-matrix_") + locale, QLatin1String(":/translations/"))) {
-        translator.load(QLatin1String("cctv-viewer_") + locale, QLatin1String(":/translations/"));
+    if (translator.load(QLatin1String("stream-matrix_") + locale, QLatin1String(":/translations/"))) {
+        app.installTranslator(&translator);
     }
-    app.installTranslator(&translator);
     app.setWindowIcon(QIcon(QLatin1String(":/images/stream-matrix.svg")));
 
     Context::init();

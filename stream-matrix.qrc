@@ -1,8 +1,6 @@
 <RCC>
     <qresource prefix="/">
         <file>qtquickcontrols2.conf</file>
-        <file>translations/stream-matrix_ru_RU.qm</file>
-        <file>translations/cctv-viewer_ru_RU.qm</file>
         <file>src/RootWindow.qml</file>
         <file>src/SettingsDialog.qml</file>
         <file>src/Player.qml</file>
