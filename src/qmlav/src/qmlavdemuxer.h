@@ -61,6 +61,10 @@ public:
         int64_t t = m_timeout.load(std::memory_order_relaxed);
         m_expireTime.store(t > 0 ? (av_gettime_relative() + t) : 0, std::memory_order_relaxed);
     }
+    bool hasTimedOut() const {
+        int64_t expire = m_expireTime.load(std::memory_order_relaxed);
+        return expire > 0 && av_gettime_relative() > expire;
+    }
 
 private:
     std::atomic<int64_t> m_timeout = 0;
@@ -94,6 +98,7 @@ signals:
     void playbackStateChanged(QMediaPlayer::State state);
     void mediaStatusChanged(QMediaPlayer::MediaStatus status);
     void frameFinished(const std::shared_ptr<QmlAVFrame> frame);
+    void errorOccurred(const QString &error);
 
 protected:
     auto &context() { return m_context; }

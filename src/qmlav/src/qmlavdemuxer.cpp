@@ -46,6 +46,18 @@ QmlAVDemuxer::~QmlAVDemuxer()
     }
 }
 
+static QString formatAvError(int ret, const QmlAVInterruptCallback &cb)
+{
+    if (cb.hasTimedOut() || (ret == AVERROR_EXIT && !cb.isAVInterruptRequested())) {
+        return QObject::tr("Connection timed out");
+    }
+    char errbuf[AV_ERROR_MAX_STRING_SIZE] = {0};
+    if (av_strerror(ret, errbuf, sizeof(errbuf)) == 0) {
+        return QString::fromUtf8(errbuf);
+    }
+    return QObject::tr("Error %1").arg(ret);
+}
+
 void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 {
     int ret = AVERROR_UNKNOWN;
@@ -63,11 +75,12 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 
     if (source.isEmpty()) {
         logInfo() << "Source is emty!";
+        emit errorOccurred(tr("No source specified"));
         emit mediaStatusChanged(QMediaPlayer::NoMedia);
         return;
     }
 
-#if (LIBAVFORMAT_VERSION_MAJOR < 58)
+    #if (LIBAVFORMAT_VERSION_MAJOR < 58)
     av_register_all();
 #endif
     avformat_network_init();
@@ -86,7 +99,9 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
                                   avOptions.avInputFormat(),
                                   dict);
         if (ret < 0) {
-            logWarning() << QString("Unable to open input file: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+            QString errStr = formatAvError(ret, m_interruptCallback);
+            logWarning() << QString("Unable to open input file: \"%1\" (%2)").arg(errStr).arg(ret);
+            emit errorOccurred(errStr);
             emit mediaStatusChanged(QMediaPlayer::InvalidMedia);
             return;
         }
@@ -95,7 +110,9 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 
         ret = avformat_find_stream_info(m_context->avFormatCtx, nullptr);
         if (ret < 0) {
-            logWarning() << QString("Cannot find stream information: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+            QString errStr = formatAvError(ret, m_interruptCallback);
+            logWarning() << QString("Cannot find stream information: \"%1\" (%2)").arg(errStr).arg(ret);
+            emit errorOccurred(errStr);
             emit mediaStatusChanged(QMediaPlayer::InvalidMedia);
             return;
         }
@@ -110,6 +127,7 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 
         if (!isLoaded()) {
             logWarning() << "Unable to open any decoder";
+            emit errorOccurred(tr("Unable to open any decoder"));
             emit mediaStatusChanged(QMediaPlayer::InvalidMedia);
             return;
         }
@@ -158,7 +176,11 @@ void QmlAVDemuxer::start()
             }
 
             if (ret != AVERROR_EXIT) {
-                logWarning() << QString("Unable read frame: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+                QString errStr = formatAvError(ret, m_interruptCallback);
+                logWarning() << QString("Unable read frame: \"%1\" (%2)").arg(errStr).arg(ret);
+                emit errorOccurred(errStr);
+            } else if (m_interruptCallback.hasTimedOut()) {
+                emit errorOccurred(tr("Connection timed out"));
             }
 
             return stop();

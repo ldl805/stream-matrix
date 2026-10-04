@@ -46,6 +46,7 @@ void QmlAVPlayer::play()
     logDebug() << "play()";
 
     cancelReconnect();
+    setErrorString(QString());
     m_timeSinceLastVideoFrame.restart();
 
     if (load()) {
@@ -57,8 +58,19 @@ void QmlAVPlayer::play()
 void QmlAVPlayer::retry()
 {
     logDebug() << "retry()";
+    m_reconnectTimer.stop();
+    setReconnecting(true);
+    setReconnectDelayMs(0);
+    setReconnectAttempt(m_reconnectAttempt + 1);
+    setErrorString(QString());
+
     stop();
-    play();
+    m_timeSinceLastVideoFrame.restart();
+
+    if (load()) {
+        m_demuxer->start();
+        m_metricsTimer.start();
+    }
 }
 
 void QmlAVPlayer::stop()
@@ -265,6 +277,7 @@ bool QmlAVPlayer::load()
         connect(m_demuxer, &QmlAVDemuxer::frameFinished, this, &QmlAVPlayer::frameHandler);
         connect(m_demuxer, &QmlAVDemuxer::playbackStateChanged, this, &QmlAVPlayer::setPlaybackState);
         connect(m_demuxer, &QmlAVDemuxer::mediaStatusChanged, this, &QmlAVPlayer::setStatus);
+        connect(m_demuxer, &QmlAVDemuxer::errorOccurred, this, &QmlAVPlayer::setErrorString);
 
         m_demuxer->load(m_source, m_avOptions);
 
@@ -289,6 +302,8 @@ void QmlAVPlayer::scheduleReconnect()
         m_currentBackoffMs = std::min(m_maxReconnectInterval, static_cast<int>(m_currentBackoffMs * 1.5));
     }
 
+    setReconnectDelayMs(m_currentBackoffMs);
+
     logInfo() << QString("Scheduling reconnect attempt %1 in %2 ms for %3")
                  .arg(m_reconnectAttempt)
                  .arg(m_currentBackoffMs)
@@ -302,12 +317,16 @@ void QmlAVPlayer::cancelReconnect()
     m_reconnectTimer.stop();
     setReconnecting(false);
     setReconnectAttempt(0);
+    setReconnectDelayMs(0);
+    setErrorString(QString());
     m_currentBackoffMs = m_reconnectInterval;
 }
 
 void QmlAVPlayer::onReconnectTimer()
 {
     if (m_reconnecting && m_source.isValid()) {
+        setReconnectDelayMs(0);
+        setErrorString(QString());
         logInfo() << QString("Executing reconnect attempt %1 for %2")
                      .arg(m_reconnectAttempt)
                      .arg(m_source.toString());
@@ -520,4 +539,18 @@ void QmlAVPlayer::setReconnectAttempt(int attempt)
     if (m_reconnectAttempt == attempt) return;
     m_reconnectAttempt = attempt;
     emit reconnectAttemptChanged(attempt);
+}
+
+void QmlAVPlayer::setReconnectDelayMs(int delayMs)
+{
+    if (m_reconnectDelayMs == delayMs) return;
+    m_reconnectDelayMs = delayMs;
+    emit reconnectDelayMsChanged(delayMs);
+}
+
+void QmlAVPlayer::setErrorString(const QString &error)
+{
+    if (m_errorString == error) return;
+    m_errorString = error;
+    emit errorStringChanged(error);
 }

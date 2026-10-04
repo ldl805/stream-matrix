@@ -24,8 +24,57 @@ FocusScope {
     readonly property alias videoCodec: qmlAvPlayer.videoCodec
     readonly property alias videoResolution: qmlAvPlayer.videoResolution
     readonly property alias isHWAccelerated: qmlAvPlayer.isHWAccelerated
+    property alias autoReconnect: qmlAvPlayer.autoReconnect
     readonly property alias reconnecting: qmlAvPlayer.reconnecting
     readonly property alias reconnectAttempt: qmlAvPlayer.reconnectAttempt
+    readonly property alias errorString: qmlAvPlayer.errorString
+    readonly property alias reconnectDelayMs: qmlAvPlayer.reconnectDelayMs
+
+    property int reconnectCountdown: 0
+    property bool manualRetryPending: false
+
+    Connections {
+        target: qmlAvPlayer
+        onReconnectDelayMsChanged: {
+            if (qmlAvPlayer.reconnectDelayMs > 0) {
+                root.reconnectCountdown = Math.ceil(qmlAvPlayer.reconnectDelayMs / 1000);
+                countdownTimer.restart();
+            } else {
+                root.reconnectCountdown = 0;
+                countdownTimer.stop();
+            }
+        }
+        onStatusChanged: {
+            if (qmlAvPlayer.status !== MediaPlayer.Loading && !resetManualRetryTimer.running) {
+                root.manualRetryPending = false;
+            }
+        }
+    }
+
+    Timer {
+        id: countdownTimer
+        interval: 1000
+        repeat: true
+        running: false
+        onTriggered: {
+            if (root.reconnectCountdown > 1) {
+                root.reconnectCountdown -= 1;
+            } else {
+                root.reconnectCountdown = 0;
+                stop();
+            }
+        }
+    }
+
+    Timer {
+        id: resetManualRetryTimer
+        interval: 800
+        onTriggered: {
+            if (qmlAvPlayer.status !== MediaPlayer.Loading) {
+                root.manualRetryPending = false;
+            }
+        }
+    }
 
     onVisibleChanged: {
         if (visible) {
@@ -74,70 +123,157 @@ FocusScope {
 
             color: "white"
             font.pointSize: 11
-            visible: qmlAvPlayer.status !== MediaPlayer.Buffered && !qmlAvPlayer.reconnecting
+            visible: qmlAvPlayer.status !== MediaPlayer.Buffered && !qmlAvPlayer.reconnecting && qmlAvPlayer.status !== MediaPlayer.InvalidMedia
             anchors.centerIn: parent
         }
 
-        // Reconnecting Badge Overlay
+        // Reconnecting & Stream Error Overlay
         Rectangle {
-            id: reconnectBadge
-            visible: qmlAvPlayer.reconnecting
+            id: reconnectOverlay
+            visible: (qmlAvPlayer.reconnecting || qmlAvPlayer.status === MediaPlayer.InvalidMedia) && !qmlAvPlayer.hasVideo
             anchors.centerIn: parent
-            width: reconnectLayout.implicitWidth + 24
-            height: reconnectLayout.implicitHeight + 16
-            radius: 6
-            color: "#CC181818"
-            border.color: "#FF9900"
+            width: Math.min(parent.width - 16, Math.max(210, reconnectLayout.implicitWidth + 32))
+            height: reconnectLayout.implicitHeight + 20
+            radius: 8
+            color: "#E61A1D24"
+            border.color: isConnecting ? "#388BFD" : (qmlAvPlayer.errorString.length > 0 ? "#D94848" : "#E3B341")
             border.width: 1
+
+            readonly property bool isConnecting: qmlAvPlayer.status === MediaPlayer.Loading || root.manualRetryPending
 
             Column {
                 id: reconnectLayout
                 anchors.centerIn: parent
-                spacing: 6
+                spacing: 8
+                width: parent.width - 24
 
+                // Header with Status Icon & Main Title
                 Row {
                     anchors.horizontalCenter: parent.horizontalCenter
                     spacing: 8
 
                     Text {
-                        text: "🔄"
+                        text: reconnectOverlay.isConnecting ? "🔄" : (qmlAvPlayer.errorString.length > 0 ? "⚠️" : "⏳")
                         font.pointSize: 12
                         anchors.verticalCenter: parent.verticalCenter
                         RotationAnimator on rotation {
                             from: 0
                             to: 360
-                            duration: 1200
+                            duration: 1000
                             loops: Animation.Infinite
-                            running: qmlAvPlayer.reconnecting
+                            running: reconnectOverlay.isConnecting
                         }
                     }
 
                     Text {
-                        text: qsTr("Reconnecting (attempt %1)...").arg(qmlAvPlayer.reconnectAttempt)
-                        color: "#FFCC00"
+                        text: {
+                            if (reconnectOverlay.isConnecting) {
+                                return qsTr("Connecting (attempt %1)...").arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
+                            } else if (root.reconnectCountdown > 0) {
+                                return qsTr("Retrying in %1s (attempt %2)...").arg(root.reconnectCountdown).arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
+                            } else {
+                                return qsTr("Stream Offline (attempt %1)").arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
+                            }
+                        }
+                        color: reconnectOverlay.isConnecting ? "#58A6FF" : "#F0883E"
                         font.bold: true
                         font.pointSize: 10
                         anchors.verticalCenter: parent.verticalCenter
                     }
                 }
 
+                // Subtitle / Error Detail
+                Text {
+                    id: statusDetailText
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    width: parent.width
+                    horizontalAlignment: Text.AlignHCenter
+                    maximumLineCount: 2
+                    wrapMode: Text.WrapAnywhere
+                    elide: Text.ElideRight
+                    font.pointSize: 8
+                    text: {
+                        if (reconnectOverlay.isConnecting) {
+                            return qsTr("Attempting connection to stream...");
+                        } else if (qmlAvPlayer.errorString.length > 0) {
+                            return qsTr("Error: %1").arg(qmlAvPlayer.errorString);
+                        } else {
+                            return qsTr("Connection lost. Waiting to retry...");
+                        }
+                    }
+                    color: reconnectOverlay.isConnecting ? "#8B949E" : (qmlAvPlayer.errorString.length > 0 ? "#FF7B72" : "#8B949E")
+                }
+
+                // Interactive "Retry Now" / "Retrying..." Button
                 Rectangle {
-                    width: 70
-                    height: 22
-                    radius: 3
-                    color: "#333333"
+                    id: retryButton
+                    width: Math.max(90, retryBtnContent.implicitWidth + 24)
+                    height: 26
+                    radius: 4
                     anchors.horizontalCenter: parent.horizontalCenter
 
-                    Text {
-                        text: qsTr("Retry Now")
-                        color: "white"
-                        font.pointSize: 8
+                    readonly property bool isBusy: reconnectOverlay.isConnecting
+
+                    color: {
+                        if (isBusy) return "#1F3A5C";
+                        if (retryMouseArea.pressed) return "#1F56A3";
+                        if (retryMouseArea.containsMouse) return "#3A4553";
+                        return "#2C313A";
+                    }
+
+                    border.color: {
+                        if (isBusy) return "#388BFD";
+                        if (retryMouseArea.pressed || retryMouseArea.containsMouse) return "#58A6FF";
+                        return "#484F58";
+                    }
+                    border.width: 1
+
+                    scale: retryMouseArea.pressed && !isBusy ? 0.95 : 1.0
+                    Behavior on scale { NumberAnimation { duration: 80 } }
+                    Behavior on color { ColorAnimation { duration: 120 } }
+                    Behavior on border.color { ColorAnimation { duration: 120 } }
+
+                    Row {
+                        id: retryBtnContent
                         anchors.centerIn: parent
+                        spacing: 6
+
+                        Text {
+                            text: "🔄"
+                            font.pointSize: 8
+                            visible: retryButton.isBusy
+                            anchors.verticalCenter: parent.verticalCenter
+                            RotationAnimator on rotation {
+                                from: 0
+                                to: 360
+                                duration: 800
+                                loops: Animation.Infinite
+                                running: retryButton.isBusy
+                            }
+                        }
+
+                        Text {
+                            id: retryBtnText
+                            text: retryButton.isBusy ? qsTr("Retrying...") : qsTr("Retry Now")
+                            color: retryButton.isBusy ? "#79C0FF" : (retryMouseArea.containsMouse ? "#FFFFFF" : "#C9D1D9")
+                            font.pointSize: 8
+                            font.bold: true
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
 
                     MouseArea {
+                        id: retryMouseArea
                         anchors.fill: parent
-                        onClicked: qmlAvPlayer.retry()
+                        hoverEnabled: true
+                        cursorShape: retryButton.isBusy ? Qt.ArrowCursor : Qt.PointingHandCursor
+                        enabled: !retryButton.isBusy
+
+                        onClicked: {
+                            root.manualRetryPending = true;
+                            resetManualRetryTimer.restart();
+                            qmlAvPlayer.retry();
+                        }
                     }
                 }
             }
@@ -201,7 +337,7 @@ FocusScope {
             id: qmlAvPlayer
 
             autoLoad: false
-            autoReconnect: true
+            autoReconnect: typeof viewportSettings !== "undefined" ? viewportSettings.autoReconnect : true
 
             avOptions: {
                 var avOptions = root.avOptions;

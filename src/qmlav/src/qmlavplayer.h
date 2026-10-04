@@ -49,6 +49,8 @@ class QmlAVPlayer : public QObject, public QQmlParserStatus
     QMLAV_PROPERTY_READONLY(int, reconnectAttempt, reconnectAttemptChanged) = 0;
     QMLAV_PROPERTY(int, reconnectInterval, setReconnectInterval, reconnectIntervalChanged) = 2000;
     QMLAV_PROPERTY(int, maxReconnectInterval, setMaxReconnectInterval, maxReconnectIntervalChanged) = 15000;
+    QMLAV_PROPERTY_READONLY(int, reconnectDelayMs, reconnectDelayMsChanged) = 0;
+    QMLAV_PROPERTY_READONLY(QString, errorString, errorStringChanged) = QString();
 
 public:
     QmlAVPlayer(QObject *parent = nullptr);
@@ -89,6 +91,8 @@ protected:
     void setFramesDiscarded(int count);
     void setReconnecting(bool reconnecting);
     void setReconnectAttempt(int attempt);
+    void setReconnectDelayMs(int delayMs);
+    void setErrorString(const QString &error);
 
 private slots:
     void updateMetrics();
