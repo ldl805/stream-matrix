@@ -81,10 +81,9 @@ ApplicationWindow {
         property string defaultAVFormatOptions: JSON.stringify({
             "rtsp_transport": "tcp",
             "fflags": "nobuffer",
-            "flags": "low_delay",
-            "stimeout": "5000000",
             "timeout": "5000000",
-            "buffer_size": "1048576"
+            "analyzeduration": "1000000",
+            "probesize": "500000"
         })
 
         function toJSValue(key) {

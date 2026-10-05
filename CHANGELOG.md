@@ -5,6 +5,15 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.1] - 2026-10-04
+
+### Changed
+- **Multi-Threaded Frame Decoding**: Ensured multi-threaded slice and frame decoding (`FF_THREAD_FRAME`) is actively utilized by filtering out conflicting `low_delay` flags during video decoder initialization, significantly improving multi-core CPU utilization on devices like Raspberry Pi 5.
+- **Keyframe-Aware Overflow Protection**: Refactored packet waiting queue to use `std::deque` with keyframe-aware dropping (`AV_PKT_FLAG_KEY`), preventing video corruption and visual smearing when network packet buffers overflow.
+- **Latency Backlog Reduction**: Reduced video packet buffer limit to ~2 seconds of backlog (64 packets), allowing streams that temporarily lag to rapidly catch up and resynchronize to live playback.
+- **Optimized RTSP Startup & Probe Durations**: Set stream analysis duration to 1 second (`analyzeduration: 1000000`) and probe size to 500 KB (`probesize: 500000`), cutting initial connection latency and reconnect time from FFmpeg's 5-second default down to ~1 second.
+- **Cleaned Obsolete Network Flags**: Removed deprecated `stimeout` and UDP-only `buffer_size` from default connection parameters.
+
 ## [1.1] - 2026-10-04
 
 ### Added

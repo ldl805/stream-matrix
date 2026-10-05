@@ -110,6 +110,7 @@ private:
     QElapsedTimer m_timeSinceLastVideoFrame;
     int m_presentedFramesCount;
     int m_currentBackoffMs;
+    qulonglong m_lastPacketsDropped = 0;
 
     QmlAVAudioIODevice m_audioIODevice;
     QAudioOutput *m_audioOutput;

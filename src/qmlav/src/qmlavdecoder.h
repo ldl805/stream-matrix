@@ -67,6 +67,13 @@ public:
 
     void setDropOnOverflow(bool drop) { m_threadTask.argsQueue()->setDropOnOverflow(drop); }
     void setPacketQueueLimit(size_t limit) { m_threadTask.argsQueue()->setProducerLimit(limit); }
+    // On packet queue overflow, skip ahead to the next keyframe instead of dropping arbitrary packets
+    void setKeyframeAwareDrop() {
+        m_threadTask.argsQueue()->setSyncPointPredicate([](const auto &args) {
+            const auto &avPacket = std::get<AVPacketPtr>(args);
+            return (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
+        });
+    }
 
     bool decodeAVPacket(const AVPacketPtr &avPacket);
 
@@ -74,6 +81,7 @@ public:
     void waitForEmptyPacketQueue() { m_threadTask.argsQueue()->waitForEmpty(); }
 
     int packetQueueLength() const { return m_threadTask.argsQueue()->length(); }
+    size_t packetsDropped() const { return m_threadTask.argsQueue()->droppedCount(); }
     int frameQueueLength() const { return m_counters.frameQueueLength; }
 
     auto &counters() { return m_counters; }

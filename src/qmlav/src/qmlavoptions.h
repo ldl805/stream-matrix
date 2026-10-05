@@ -23,6 +23,22 @@ public:
         av_dict_set(m_avDict.get(), key.c_str(), value.c_str(), AV_DICT_MULTIKEY);
     }
 
+    std::optional<std::string> get(const std::string &key) const {
+        const AVDictionaryEntry *entry = av_dict_get(*m_avDict.get(), key.c_str(), nullptr, AV_DICT_MATCH_CASE);
+        if (entry && entry->value) {
+            return std::string(entry->value);
+        }
+        return std::nullopt;
+    }
+
+    void remove(const std::string &key) {
+        av_dict_set(m_avDict.get(), key.c_str(), nullptr, AV_DICT_MATCH_CASE);
+    }
+
+    void replace(const std::string &key, const std::string &value) {
+        av_dict_set(m_avDict.get(), key.c_str(), value.c_str(), AV_DICT_MATCH_CASE);
+    }
+
     operator AVDictionary *() { return *m_avDict.get(); }
     operator AVDictionary **() { return m_avDict.get(); }
 

@@ -94,6 +94,16 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 
     m_loaderThread = QmlAVThread::run([=]() mutable {
         AVDictionaryPtr dict = static_cast<AVDictionaryPtr>(avOptions);
+
+        if (m_context->clock.realTime) {
+            if (!dict.get("analyzeduration").has_value()) {
+                dict.set("analyzeduration", "1000000"); // 1 second analysis window
+            }
+            if (!dict.get("probesize").has_value()) {
+                dict.set("probesize", "500000"); // 500 KB probe size
+            }
+        }
+
         ret = avformat_open_input(&m_context->avFormatCtx,
                                   source.toUtf8(),
                                   avOptions.avInputFormat(),
@@ -219,6 +229,7 @@ QVariantMap QmlAVDemuxer::stat() const
         { "videoPacketsDecoded", vc.packetsDecoded.get() },
         { "videoFramesDecoded", vc.framesDecoded.get() },
         { "videoFramesDiscarded", vc.framesDiscarded.get() },
+        { "videoPacketsDropped", static_cast<qulonglong>(m_context->videoDecoder->packetsDropped()) },
         { "audioPacketsDecoded", ac.packetsDecoded.get() },
         { "audioBuffersDecoded", ac.framesDecoded.get() },
         { "audioBuffersDiscarded", ac.framesDiscarded.get() }

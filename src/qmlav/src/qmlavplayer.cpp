@@ -84,6 +84,7 @@ void QmlAVPlayer::stop()
         disconnect(m_demuxer, nullptr, this, nullptr);
         delete m_demuxer;
         m_demuxer = nullptr;
+        m_lastPacketsDropped = 0;
     }
 
     if (m_videoSurface && m_videoSurface->isActive()) {
@@ -400,6 +401,16 @@ void QmlAVPlayer::updateMetrics()
         auto stat = m_demuxer->stat();
         setFramesDecoded(stat.value("videoFramesDecoded").toInt());
         setFramesDiscarded(stat.value("videoFramesDiscarded").toInt());
+
+        qulonglong dropped = stat.value("videoPacketsDropped").toULongLong();
+        if (dropped < m_lastPacketsDropped) {
+            m_lastPacketsDropped = 0; // New demuxer after reconnect
+        }
+        if (dropped > m_lastPacketsDropped) {
+            logWarning() << QString("Decoder fell behind: skipped %1 video packets to the next keyframe (%2)")
+                                .arg(dropped - m_lastPacketsDropped).arg(m_source.toString(QUrl::RemoveUserInfo));
+            m_lastPacketsDropped = dropped;
+        }
 
         QString codec = m_demuxer->videoCodecName();
         if (!codec.isEmpty()) {

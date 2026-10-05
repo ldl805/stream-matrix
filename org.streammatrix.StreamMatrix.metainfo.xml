@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="1.1.1" date="2026-10-04">
+      <description>
+        <p>RTSP streaming optimizations for Raspberry Pi 5: active multi-threaded frame decoding, keyframe-aware packet queue, reduced latency backlog, and accelerated stream probing.</p>
+      </description>
+    </release>
     <release version="1.1" date="2026-10-04">
       <description>
         <p>Interactive retry button confirmation, live reconnection status and countdowns, FFmpeg error diagnostics, and updated blue branding.</p>

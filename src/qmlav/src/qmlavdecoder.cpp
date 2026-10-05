@@ -10,7 +10,9 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 }
 
-#define VIDEO_PACKETS_LIMIT 256
+// ~2 s of backlog at 30 fps. On overflow the video queue skips ahead to the next keyframe,
+// so a decoder that falls behind catches up to live instead of drifting seconds behind.
+#define VIDEO_PACKETS_LIMIT 64
 #define AUDIO_PACKETS_LIMIT 64
 #define VIDEO_FRAMES_LIMIT 24
 #define AUDIO_FRAMES_LIMIT 32
@@ -32,6 +34,32 @@ QmlAVDecoder::~QmlAVDecoder()
 {
     m_thread.requestInterrupt(true);
     avcodec_free_context(&m_avCodecCtx);
+}
+
+// Removes "name" from an FFmpeg flags string (e.g. "low_delay", "+low_delay+gray", "gray-unaligned").
+// Only additions of the flag are removed; an explicit "-name" is kept as is.
+static std::string removeFlag(const std::string &flags, const std::string &name, bool &removed)
+{
+    std::string kept;
+    size_t begin = 0;
+    while (begin < flags.size()) {
+        size_t end = flags.find_first_of("+-", begin + 1);
+        if (end == std::string::npos) {
+            end = flags.size();
+        }
+
+        std::string token = flags.substr(begin, end - begin);
+        bool hasSign = token[0] == '+' || token[0] == '-';
+        if ((hasSign ? token.substr(1) : token) == name && token[0] != '-') {
+            removed = true;
+        } else if (token != "+" && token != "-") {
+            kept += token;
+        }
+
+        begin = end;
+    }
+
+    return kept;
 }
 
 bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
@@ -67,6 +95,31 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         }
 
         AVDictionaryPtr opts = static_cast<AVDictionaryPtr>(avOptions);
+
+        if (m_type == TypeVideo) {
+            // NOTE: FFmpeg silently disables frame threading when AV_CODEC_FLAG_LOW_DELAY is set
+            // (see validate_thread_parameters() in libavcodec/pthread.c). Most IP cameras send a single
+            // slice per frame, so slice threading alone leaves decoding on one core. Frame threading costs
+            // (threads - 1) frames of latency, which is a good trade for smooth playback on the Pi.
+            // Users can still force the old behaviour with "-threads 1 -flags low_delay".
+            auto threads = opts.get("threads");
+            bool singleThreaded = threads.has_value() && *threads == "1";
+            if (!singleThreaded) {
+                if (auto flags = opts.get("flags"); flags.has_value()) {
+                    bool removed = false;
+                    std::string kept = removeFlag(*flags, "low_delay", removed);
+                    if (removed) {
+                        logInfo() << "Ignoring \"-flags low_delay\" for video: it disables frame-threaded decoding";
+                        if (kept.empty()) {
+                            opts.remove("flags");
+                        } else {
+                            opts.replace("flags", kept);
+                        }
+                    }
+                }
+            }
+        }
+
         ret = avcodec_open2(m_avCodecCtx, codec, opts);
         if (ret  < 0) {
             logWarning() << QString("Unable initialize codec context: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
@@ -74,6 +127,19 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         }
 
         logDebug() << "avcodec_open2() options ignored: " << QmlAV::Quote << opts.toString();
+
+        if (m_type == TypeVideo) {
+            QString mode;
+            if (m_avCodecCtx->active_thread_type & FF_THREAD_FRAME) {
+                mode = "frame";
+            } else if (m_avCodecCtx->active_thread_type & FF_THREAD_SLICE) {
+                mode = "slice";
+            } else {
+                mode = "none";
+            }
+            logInfo() << QString("Video decoder \"%1\": %2 thread(s), threading mode: %3")
+                             .arg(codec->name).arg(m_avCodecCtx->thread_count).arg(mode);
+        }
 
         m_avStream = avStream;
         m_timeBase = avStream->time_base;
@@ -207,6 +273,7 @@ QmlAVVideoDecoder::QmlAVVideoDecoder(QmlAVMediaContextHolder *context)
 {   
     setPacketQueueLimit(VIDEO_PACKETS_LIMIT);
     setDropOnOverflow(true);
+    setKeyframeAwareDrop();
     m_frameQueueLimit.setLimit(VIDEO_FRAMES_LIMIT);
 }
 
