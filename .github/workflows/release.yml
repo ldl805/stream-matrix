@@ -92,3 +92,4 @@ jobs:
           release_packages/*.tar.gz
           release_packages/*.deb
         generate_release_notes: true
+        make_latest: true
