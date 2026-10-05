@@ -143,7 +143,7 @@ flatpak run org.streammatrix.StreamMatrix
 ### Recommended RTSP FFmpeg Options
 In **Settings → Viewport → Default FFmpeg options**, the following defaults are pre-configured for low latency and robust streaming:
 ```text
--rtsp_transport tcp -fflags nobuffer -flags low_delay -stimeout 5000000 -timeout 5000000 -buffer_size 1048576
+-rtsp_transport tcp -fflags nobuffer  -timeout 5000000 -probesize 500000 -analyzeduration 1000000
 ```
 *(Note for Raspberry Pi 5: The BCM2712 CPU handles H.264 streams using multi-threaded NEON software decode; hardware decoding on Pi 5 is reserved for HEVC/H.265. Omit `-hwaccel drm` for H.264 feeds).*
 
