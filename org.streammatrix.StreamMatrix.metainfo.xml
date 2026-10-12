@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="1.2.0" date="2026-10-12">
+      <description>
+        <p>Overhaul stream reconnection architecture: manual-only reconnect mode by default to prevent NVR/camera daemon exhaustion, and an unblocked robust retry button that forces an immediate reconnect attempt on every click.</p>
+      </description>
+    </release>
     <release version="1.1.1" date="2026-10-04">
       <description>
         <p>RTSP streaming optimizations for Raspberry Pi 5: active multi-threaded frame decoding, keyframe-aware packet queue, reduced latency backlog, and accelerated stream probing.</p>

@@ -5,6 +5,15 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] - 2026-10-12
+
+### Changed
+- **Manual-Only Reconnection Architecture**: Replaced automatic reconnect timer loops with a strictly manual reconnect design. Stream disconnection or stalling halts background reconnection to prevent RTSP socket and daemon exhaustion on embedded NVRs/cameras (e.g. Eufy HomeBase).
+- **Unrestricted Robust Retry Button**: Removed all UI click lockouts, rate limiters, and disabled states from the retry action. Clicking the retry button immediately cancels any active loaders, interrupts blocking socket reads, and forces a fresh connection attempt every single time, even if clicked in rapid succession.
+- **Stalled Video Feed Watchdog**: Watchdog now cleanly transitions to `InvalidMedia` with explicit status error (`"Stream stalled (no video received)"`) when no frames are received for >7 seconds, keeping the stream ready for an immediate manual reconnect.
+- **URL Sanitization**: Trim leading and trailing whitespace from stream URLs during demuxer initialization.
+- **Updated Default Settings**: Set default `autoReconnect` to `false` across backend configuration, QML defaults, and runtime profiles.
+
 ## [1.1.1] - 2026-10-04
 
 ### Changed

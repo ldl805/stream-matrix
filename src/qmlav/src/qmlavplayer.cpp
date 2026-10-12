@@ -57,7 +57,7 @@ void QmlAVPlayer::play()
 
 void QmlAVPlayer::retry()
 {
-    logDebug() << "retry()";
+    logInfo() << "Manual retry requested for:" << m_source.toString();
     m_reconnectTimer.stop();
     setReconnecting(true);
     setReconnectDelayMs(0);
@@ -354,7 +354,7 @@ void QmlAVPlayer::stateMachine()
             if (m_demuxer) {
                 stop();
 
-                if (m_loops == -1 /*MediaPlayer.Infinite*/ || m_autoReconnect) {
+                if (m_autoReconnect) {
                     scheduleReconnect();
                 }
             }
@@ -381,11 +381,16 @@ void QmlAVPlayer::reset()
 
 void QmlAVPlayer::updateMetrics()
 {
-    // Stalled video feed watchdog: if video is active and no video frame was presented for > 7s, trigger reconnect
-    if (m_playbackState == QMediaPlayer::PlayingState && m_hasVideo && m_autoReconnect && !m_reconnecting) {
+    // Stalled video feed watchdog: if video is active and no video frame was presented for > 7s
+    if (m_playbackState == QMediaPlayer::PlayingState && m_hasVideo && !m_reconnecting) {
         if (m_timeSinceLastVideoFrame.isValid() && m_timeSinceLastVideoFrame.hasExpired(7000)) {
-            logWarning() << QString("Stalled video feed detected (no frames for 7s). Reconnecting: %1").arg(m_source.toString());
-            scheduleReconnect();
+            logWarning() << QString("Stalled video feed detected (no frames for 7s): %1").arg(m_source.toString());
+            stop();
+            setErrorString(tr("Stream stalled (no video received)"));
+            setStatus(QMediaPlayer::InvalidMedia);
+            if (m_autoReconnect) {
+                scheduleReconnect();
+            }
             return;
         }
     }

@@ -116,7 +116,7 @@ ApplicationWindow {
         category: "Viewport"
 
         property bool unmuteWhenFullScreen: false
-        property bool autoReconnect: true
+        property bool autoReconnect: false
     }
 
     Settings {
