@@ -61,7 +61,7 @@ static QString formatAvError(int ret, const QmlAVInterruptCallback &cb)
 void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 {
     int ret = AVERROR_UNKNOWN;
-    QString source(url.toString().trimmed());
+    QString source(url.toString());
 
     if (m_context->avFormatCtx->iformat) {
         return;

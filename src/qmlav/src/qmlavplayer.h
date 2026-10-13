@@ -44,7 +44,7 @@ class QmlAVPlayer : public QObject, public QQmlParserStatus
     QMLAV_PROPERTY_READONLY(int, framesDiscarded, framesDiscardedChanged) = 0;
 
     // Auto-Reconnect watchdog properties
-    QMLAV_PROPERTY(bool, autoReconnect, setAutoReconnect, autoReconnectChanged) = false;
+    QMLAV_PROPERTY(bool, autoReconnect, setAutoReconnect, autoReconnectChanged) = true;
     QMLAV_PROPERTY_READONLY(bool, reconnecting, reconnectingChanged) = false;
     QMLAV_PROPERTY_READONLY(int, reconnectAttempt, reconnectAttemptChanged) = 0;
     QMLAV_PROPERTY(int, reconnectInterval, setReconnectInterval, reconnectIntervalChanged) = 2000;

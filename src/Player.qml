@@ -132,7 +132,7 @@ FocusScope {
             id: reconnectOverlay
             visible: (qmlAvPlayer.reconnecting || qmlAvPlayer.status === MediaPlayer.InvalidMedia) && !qmlAvPlayer.hasVideo
             anchors.centerIn: parent
-            width: Math.min(parent.width - 16, Math.max(220, reconnectLayout.implicitWidth + 32))
+            width: Math.min(parent.width - 16, Math.max(210, reconnectLayout.implicitWidth + 32))
             height: reconnectLayout.implicitHeight + 20
             radius: 8
             color: "#E61A1D24"
@@ -169,6 +169,8 @@ FocusScope {
                         text: {
                             if (reconnectOverlay.isConnecting) {
                                 return qsTr("Connecting (attempt %1)...").arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
+                            } else if (root.reconnectCountdown > 0) {
+                                return qsTr("Retrying in %1s (attempt %2)...").arg(root.reconnectCountdown).arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
                             } else {
                                 return qsTr("Stream Offline (attempt %1)").arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
                             }
@@ -192,39 +194,41 @@ FocusScope {
                     font.pointSize: 8
                     text: {
                         if (reconnectOverlay.isConnecting) {
-                            return qsTr("Connecting... Click below to force retry.");
+                            return qsTr("Attempting connection to stream...");
                         } else if (qmlAvPlayer.errorString.length > 0) {
                             return qsTr("Error: %1").arg(qmlAvPlayer.errorString);
                         } else {
-                            return qsTr("Connection stopped. Click below to reconnect.");
+                            return qsTr("Connection lost. Waiting to retry...");
                         }
                     }
                     color: reconnectOverlay.isConnecting ? "#8B949E" : (qmlAvPlayer.errorString.length > 0 ? "#FF7B72" : "#8B949E")
                 }
 
-                // Interactive "Retry Now" Button - Always responsive, never locked out
+                // Interactive "Retry Now" / "Retrying..." Button
                 Rectangle {
                     id: retryButton
-                    width: Math.max(110, retryBtnContent.implicitWidth + 24)
-                    height: 28
+                    width: Math.max(90, retryBtnContent.implicitWidth + 24)
+                    height: 26
                     radius: 4
                     anchors.horizontalCenter: parent.horizontalCenter
 
                     readonly property bool isBusy: reconnectOverlay.isConnecting
 
                     color: {
+                        if (isBusy) return "#1F3A5C";
                         if (retryMouseArea.pressed) return "#1F56A3";
                         if (retryMouseArea.containsMouse) return "#3A4553";
-                        return isBusy ? "#1F3A5C" : "#2C313A";
+                        return "#2C313A";
                     }
 
                     border.color: {
+                        if (isBusy) return "#388BFD";
                         if (retryMouseArea.pressed || retryMouseArea.containsMouse) return "#58A6FF";
-                        return isBusy ? "#388BFD" : "#484F58";
+                        return "#484F58";
                     }
                     border.width: 1
 
-                    scale: retryMouseArea.pressed ? 0.95 : 1.0
+                    scale: retryMouseArea.pressed && !isBusy ? 0.95 : 1.0
                     Behavior on scale { NumberAnimation { duration: 80 } }
                     Behavior on color { ColorAnimation { duration: 120 } }
                     Behavior on border.color { ColorAnimation { duration: 120 } }
@@ -250,8 +254,8 @@ FocusScope {
 
                         Text {
                             id: retryBtnText
-                            text: retryButton.isBusy ? qsTr("Force Retry Now") : qsTr("Reconnect Now")
-                            color: retryMouseArea.containsMouse ? "#FFFFFF" : (retryButton.isBusy ? "#79C0FF" : "#C9D1D9")
+                            text: retryButton.isBusy ? qsTr("Retrying...") : qsTr("Retry Now")
+                            color: retryButton.isBusy ? "#79C0FF" : (retryMouseArea.containsMouse ? "#FFFFFF" : "#C9D1D9")
                             font.pointSize: 8
                             font.bold: true
                             anchors.verticalCenter: parent.verticalCenter
@@ -262,8 +266,8 @@ FocusScope {
                         id: retryMouseArea
                         anchors.fill: parent
                         hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        enabled: true
+                        cursorShape: retryButton.isBusy ? Qt.ArrowCursor : Qt.PointingHandCursor
+                        enabled: !retryButton.isBusy
 
                         onClicked: {
                             root.manualRetryPending = true;
@@ -333,7 +337,7 @@ FocusScope {
             id: qmlAvPlayer
 
             autoLoad: false
-            autoReconnect: typeof viewportSettings !== "undefined" ? viewportSettings.autoReconnect : false
+            autoReconnect: typeof viewportSettings !== "undefined" ? viewportSettings.autoReconnect : true
 
             avOptions: {
                 var avOptions = root.avOptions;
