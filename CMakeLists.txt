@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.14)
 
 set(VER_MAJ 1)
-set(VER_MIN 1)
-set(VER_PAT 1)
+set(VER_MIN 2)
+set(VER_PAT 2)
 # set(REL_STATUS "alpha")
 
 set(APP_NAME "StreamMatrix")

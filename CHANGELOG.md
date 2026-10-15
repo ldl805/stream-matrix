@@ -5,6 +5,13 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.2] - 2026-10-15
+
+### Changed
+- **Automatic Reconnection Restored**: Restored automatic stream reconnection loops and background recovery watchdog.
+- **Watchdog Recovery**: Stalled video feeds and lost socket connections automatically trigger reconnection attempts as configured.
+- **Preserved Status UI**: Maintained interactive retry controls and error diagnostics alongside automatic recovery.
+
 ## [1.1.1] - 2026-10-04
 
 ### Changed
