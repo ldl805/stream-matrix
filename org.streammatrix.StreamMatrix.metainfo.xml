@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.0.0" date="2026-10-20">
+      <description>
+        <p>RTSP socket teardown and 6s cooldown backoff for embedded RTSP servers, zero-overhead muted audio skipping, leaner Raspberry Pi 5 frame queues, and prevented background reconnects on hidden presets.</p>
+      </description>
+    </release>
     <release version="1.2.2" date="2026-10-15">
       <description>
         <p>Restored automatic stream reconnection and watchdog recovery.</p>

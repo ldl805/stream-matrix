@@ -94,6 +94,10 @@ public:
     int64_t bitrate() const;
     bool isHWAccelerated() const;
 
+    void setAudioEnabled(bool enabled) { m_audioEnabled.store(enabled, std::memory_order_relaxed); }
+    bool isAudioEnabled() const { return m_audioEnabled.load(std::memory_order_relaxed); }
+    bool hasAudioStream() const { return m_context && m_context->audioDecoder && m_context->audioDecoder->isOpen(); }
+
 signals:
     void playbackStateChanged(QMediaPlayer::State state);
     void mediaStatusChanged(QMediaPlayer::MediaStatus status);
@@ -111,6 +115,7 @@ protected:
     
 private:
     QmlAVInterruptCallback m_interruptCallback;
+    std::atomic<bool> m_audioEnabled = false;
 
     QmlAVThreadLiveController<void> m_loaderThread;
     QmlAVThreadLiveController<QmlAVLoopController> m_demuxerThread;

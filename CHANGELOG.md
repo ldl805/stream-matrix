@@ -5,6 +5,20 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-10-20
+
+### Changed
+- **Tuned RTSP AVDictionary & Probe Defaults**: Increased default RTSP socket I/O `timeout` to 20s (`20000000`), `analyzeduration` to 5s (`5000000`), and `probesize` to 5 MB (`5000000`) to reliably capture keyframes and handle transient camera/base-station stalls.
+- **6-Second Reconnect Cooldown**: Raised initial reconnect backoff from 2s to 6s (max 30s) to allow embedded RTSP servers (such as Eufy HomeBase Pro) time to tear down stale TCP sockets and avoid `404 Not Found` thread locks.
+- **Zero-Overhead Muted Audio Bypass**: Skipped audio packet decoding, resampling (`swr_convert`), and cross-thread signal dispatch at the demuxer level whenever a viewport is muted (`volume == 0`), significantly reducing CPU load on Raspberry Pi 5 multi-camera grids.
+- **Leaner Raspberry Pi 5 Queue Limits**: Reduced decoded video frame queue limit (`VIDEO_FRAMES_LIMIT`) from 24 to 8 and packet queue limit (`VIDEO_PACKETS_LIMIT`) from 64 to 32 to lower memory footprint and glass-to-glass latency.
+- **FFmpeg 7 Option Compatibility & Sanitization**: Automatically mapped deprecated `-stimeout` options to `-timeout` and filtered out CLI-only flags (`-thread_queue_size`, `-i`) before calling `avformat_open_input`.
+
+### Fixed
+- **Stalled-Stream Watchdog Socket Teardown**: Fixed `QmlAVPlayer::updateMetrics()` so stalled streams immediately tear down the dead RTSP socket (`cleanup()`) *before* starting the backoff timer, rather than holding the socket open until reconnect execution.
+- **Hidden Preset Background Reconnection Leak**: Cancelled active reconnect timers on `stop()` and `setAutoPlay(false)` and gated reconnection on `m_autoPlay`, preventing hidden presets from reconnecting in the background and colliding with active camera sessions.
+- **Per-Viewport Option Mutation**: Fixed `Player.qml` and `SideBar.qml` mutating `avOptions` in place when merging `defaultAVFormatOptions`.
+
 ## [1.2.2] - 2026-10-15
 
 ### Changed

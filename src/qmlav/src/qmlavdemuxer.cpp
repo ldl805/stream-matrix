@@ -96,11 +96,19 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
         AVDictionaryPtr dict = static_cast<AVDictionaryPtr>(avOptions);
 
         if (m_context->clock.realTime) {
+            if (url.scheme() == "rtsp") {
+                if (!dict.get("rtsp_transport").has_value()) {
+                    dict.set("rtsp_transport", "tcp");
+                }
+                if (!dict.get("timeout").has_value() && !dict.get("stimeout").has_value()) {
+                    dict.set("timeout", "20000000"); // 20s socket I/O timeout (microseconds)
+                }
+            }
             if (!dict.get("analyzeduration").has_value()) {
-                dict.set("analyzeduration", "1000000"); // 1 second analysis window
+                dict.set("analyzeduration", "5000000"); // 5 second analysis window for longer camera GOPs
             }
             if (!dict.get("probesize").has_value()) {
-                dict.set("probesize", "500000"); // 500 KB probe size
+                dict.set("probesize", "5000000"); // 5 MB probe size for high-bitrate CBR bursts
             }
         }
 
@@ -201,11 +209,11 @@ void QmlAVDemuxer::start()
                 return stop();
             }
         } else if (avPacket->stream_index == m_context->audioDecoder->streamIndex()) {
-            if (!m_context->audioDecoder->decodeAVPacket(avPacket)) {
-                return stop();
+            if (m_audioEnabled.load(std::memory_order_relaxed)) {
+                if (!m_context->audioDecoder->decodeAVPacket(avPacket)) {
+                    return stop();
+                }
             }
-        } else {
-            return 1; // Minimal sleep time
         }
 
         return QmlAVLoopController::Continue;
@@ -293,13 +301,28 @@ void QmlAVDemuxer::initDecoders(const QmlAVOptions &avOptions)
     if (bestVideoStream >= 0 && !avOptions.videoDisable()) {
         if (m_context->videoDecoder->open(m_context->avFormatCtx->streams[bestVideoStream], avOptions)) {
             logDebug() << QString("Codec \"%1\" for stream #%2 opened.").arg(m_context->videoDecoder->name()).arg(bestVideoStream);
+        } else {
+            bestVideoStream = -1;
         }
+    } else {
+        bestVideoStream = -1;
     }
 
     int bestAudioStream = av_find_best_stream(m_context->avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, bestVideoStream, nullptr, 0);
     if (bestAudioStream >= 0 && !avOptions.audioDisable()) {
         if (m_context->audioDecoder->open(m_context->avFormatCtx->streams[bestAudioStream], avOptions)) {
             logDebug() << QString("Codec \"%1\" for stream #%2 opened.").arg(m_context->audioDecoder->name()).arg(bestAudioStream);
+        } else {
+            bestAudioStream = -1;
+        }
+    } else {
+        bestAudioStream = -1;
+    }
+
+    // Instruct FFmpeg demuxer to discard packets from any unused streams
+    for (unsigned int i = 0; i < m_context->avFormatCtx->nb_streams; ++i) {
+        if (static_cast<int>(i) != bestVideoStream && static_cast<int>(i) != bestAudioStream) {
+            m_context->avFormatCtx->streams[i]->discard = AVDISCARD_ALL;
         }
     }
 }

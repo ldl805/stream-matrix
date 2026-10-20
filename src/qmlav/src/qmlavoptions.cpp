@@ -16,9 +16,34 @@ QmlAVOptions::operator AVDictionaryPtr() const
 {
     AVDictionaryPtr dict;
 
+    static const std::vector<std::string> ignoredKeys = {
+        // QmlAV-internal keys handled separately
+        "f", "hwaccel", "hwaccel_output", "vcodec", "codec:v", "c:v",
+        "acodec", "codec:a", "c:a", "demuxer_timeout", "vn", "an", "rt", "aspect",
+        // ffmpeg CLI-only options (not valid libavformat/libavcodec AVOptions)
+        "thread_queue_size", "i", "y", "n", "nostdin", "hide_banner", "stats"
+    };
+
     for (const auto &[key, value] : asKeyValueRange(m_avOptions)) {
-        dict.set(key.toStdString(), value.toString().toStdString());
-        logDebug() << "Added AVFormat option: -" << key << QmlAV::Space << value;
+        std::string k = key.toStdString();
+        std::string v = value.toString().toStdString();
+
+        if (std::find(ignoredKeys.begin(), ignoredKeys.end(), k) != ignoredKeys.end()) {
+            continue;
+        }
+
+#if (LIBAVFORMAT_VERSION_MAJOR >= 59)
+        if (k == "stimeout") {
+            if (!m_avOptions.contains("timeout")) {
+                logInfo() << "Mapping deprecated FFmpeg option -stimeout to -timeout (" << value << ")";
+                k = "timeout";
+            } else {
+                continue;
+            }
+        }
+#endif
+        dict.set(k, v);
+        logDebug() << "Added AVFormat option: -" << QString::fromStdString(k) << QmlAV::Space << value;
     }
 
     return dict;

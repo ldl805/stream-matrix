@@ -10,12 +10,12 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 }
 
-// ~2 s of backlog at 30 fps. On overflow the video queue skips ahead to the next keyframe,
+// ~1 s of backlog at 30 fps. On overflow the video queue skips ahead to the next keyframe,
 // so a decoder that falls behind catches up to live instead of drifting seconds behind.
-#define VIDEO_PACKETS_LIMIT 64
-#define AUDIO_PACKETS_LIMIT 64
-#define VIDEO_FRAMES_LIMIT 24
-#define AUDIO_FRAMES_LIMIT 32
+#define VIDEO_PACKETS_LIMIT 32
+#define AUDIO_PACKETS_LIMIT 32
+#define VIDEO_FRAMES_LIMIT 8
+#define AUDIO_FRAMES_LIMIT 16
 
 QmlAVDecoder::QmlAVDecoder(QmlAVMediaContextHolder *context, Type type)
     : m_avCodecCtx(nullptr)

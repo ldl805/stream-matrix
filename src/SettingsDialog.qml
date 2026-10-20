@@ -149,14 +149,8 @@ Dialog {
         carouselRunningCheckBox.checked = presetsSettings.carouselRunning;
         carouselIntervalSpinBox.value = presetsSettings.carouselInterval;
 
-        defaultAVFormatOptions.text = "";
         var options = layoutsCollectionSettings.toJSValue("defaultAVFormatOptions");
-        for (var key in options) {
-            if (typeof options[key] === "string" || typeof options[key] === "number") {
-                defaultAVFormatOptions.text += "-%1 %2 ".arg(key).arg(options[key]);
-            }
-        }
-        defaultAVFormatOptions.text = defaultAVFormatOptions.text.trim();
+        defaultAVFormatOptions.text = Utils.stringifyOptions(options);
     }
 
     function saveSettings() {

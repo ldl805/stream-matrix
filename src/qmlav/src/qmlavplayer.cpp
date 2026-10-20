@@ -6,7 +6,7 @@ QmlAVPlayer::QmlAVPlayer(QObject *parent)
     , m_demuxer(nullptr)
     , m_videoSurface(nullptr)
     , m_presentedFramesCount(0)
-    , m_currentBackoffMs(2000)
+    , m_currentBackoffMs(6000)
     , m_audioOutput(nullptr)
 {
     qRegisterMetaType<QList<QVideoFrame::PixelFormat>>();
@@ -27,7 +27,7 @@ QmlAVPlayer::~QmlAVPlayer()
 {
     m_reconnectTimer.stop();
     m_metricsTimer.stop();
-    stop();
+    cleanup();
 }
 
 void QmlAVPlayer::componentComplete()
@@ -64,7 +64,7 @@ void QmlAVPlayer::retry()
     setReconnectAttempt(m_reconnectAttempt + 1);
     setErrorString(QString());
 
-    stop();
+    cleanup();
     m_timeSinceLastVideoFrame.restart();
 
     if (load()) {
@@ -76,6 +76,13 @@ void QmlAVPlayer::retry()
 void QmlAVPlayer::stop()
 {
     logDebug() << "stop()";
+    cancelReconnect();
+    cleanup();
+}
+
+void QmlAVPlayer::cleanup()
+{
+    logDebug() << "cleanup()";
 
     m_metricsTimer.stop();
     m_timeSinceLastVideoFrame.invalidate();
@@ -108,7 +115,7 @@ void QmlAVPlayer::stop()
 void QmlAVPlayer::setVideoSurface(QAbstractVideoSurface *surface)
 {
     if (m_videoSurface != surface) {
-        stop();
+        cleanup();
     }
 
     m_videoSurface = surface;
@@ -157,7 +164,7 @@ void QmlAVPlayer::frameHandler(const std::shared_ptr<QmlAVFrame> frame)
 
                 if (m_videoSurface->isActive()) {
                     if (!m_videoSurface->present(qvf)) {
-                        stop();
+                        cleanup();
                     } else {
                         m_presentedFramesCount++;
                         m_timeSinceLastVideoFrame.restart();
@@ -230,8 +237,12 @@ void QmlAVPlayer::setAutoPlay(QmlAVPropertyType<bool> autoPlay)
 
     m_autoPlay = autoPlay;
 
-    if (m_complete && autoPlay) {
-        play();
+    if (m_complete) {
+        if (autoPlay) {
+            play();
+        } else {
+            stop();
+        }
     }
 
     emit autoPlayChanged(autoPlay);
@@ -253,6 +264,24 @@ void QmlAVPlayer::setSource(QmlAVPropertyType<QUrl> source)
     emit sourceChanged(source);
 }
 
+void QmlAVPlayer::setMuted(QmlAVPropertyType<bool> muted)
+{
+    if (m_muted == muted) {
+        return;
+    }
+
+    m_muted = muted;
+
+    if (m_demuxer) {
+        m_demuxer->setAudioEnabled(!m_muted && m_volume > 0.0);
+    }
+    if (m_muted) {
+        m_audioIODevice.clear();
+    }
+
+    emit mutedChanged(muted);
+}
+
 void QmlAVPlayer::setVolume(QmlAVPropertyType<double> volume)
 {
     if (qFuzzyCompare(m_volume, volume)) {
@@ -261,10 +290,17 @@ void QmlAVPlayer::setVolume(QmlAVPropertyType<double> volume)
 
     m_volume = volume;
 
+    if (m_demuxer) {
+        m_demuxer->setAudioEnabled(!m_muted && m_volume > 0.0);
+    }
+
     if (m_audioOutput) {
         m_audioOutput->setVolume(QAudio::convertVolume(volume,
                                                        QAudio::LogarithmicVolumeScale,
                                                        QAudio::LinearVolumeScale));
+    }
+    if (m_volume <= 0.0) {
+        m_audioIODevice.clear();
     }
 
     emit volumeChanged(volume);
@@ -274,6 +310,7 @@ bool QmlAVPlayer::load()
 {
     if (!m_demuxer && m_source.isValid()) {
         m_demuxer = new QmlAVDemuxer();
+        m_demuxer->setAudioEnabled(!m_muted && m_volume > 0.0);
 
         connect(m_demuxer, &QmlAVDemuxer::frameFinished, this, &QmlAVPlayer::frameHandler);
         connect(m_demuxer, &QmlAVDemuxer::playbackStateChanged, this, &QmlAVPlayer::setPlaybackState);
@@ -290,7 +327,7 @@ bool QmlAVPlayer::load()
 
 void QmlAVPlayer::scheduleReconnect()
 {
-    if (!m_autoReconnect || !m_source.isValid() || m_source.isEmpty()) {
+    if (!m_autoPlay || !m_autoReconnect || !m_source.isValid() || m_source.isEmpty()) {
         return;
     }
 
@@ -325,13 +362,13 @@ void QmlAVPlayer::cancelReconnect()
 
 void QmlAVPlayer::onReconnectTimer()
 {
-    if (m_reconnecting && m_source.isValid()) {
+    if (m_autoPlay && m_reconnecting && m_source.isValid()) {
         setReconnectDelayMs(0);
         setErrorString(QString());
         logInfo() << QString("Executing reconnect attempt %1 for %2")
                      .arg(m_reconnectAttempt)
                      .arg(m_source.toString());
-        stop();
+        cleanup();
         if (load()) {
             m_demuxer->start();
             m_metricsTimer.start();
@@ -352,9 +389,9 @@ void QmlAVPlayer::stateMachine()
         case QMediaPlayer::InvalidMedia: {
             // Internal demuxer interrupt or error
             if (m_demuxer) {
-                stop();
+                cleanup();
 
-                if (m_loops == -1 /*MediaPlayer.Infinite*/ || m_autoReconnect) {
+                if (m_autoPlay && (m_loops == -1 /*MediaPlayer.Infinite*/ || m_autoReconnect)) {
                     scheduleReconnect();
                 }
             }
@@ -369,7 +406,7 @@ void QmlAVPlayer::stateMachine()
 void QmlAVPlayer::reset()
 {
     if (m_complete) {
-        stop();
+        cleanup();
 
         if (m_autoPlay) {
             play();
@@ -381,10 +418,12 @@ void QmlAVPlayer::reset()
 
 void QmlAVPlayer::updateMetrics()
 {
-    // Stalled video feed watchdog: if video is active and no video frame was presented for > 7s, trigger reconnect
+    // Stalled video feed watchdog: if video is active and no video frame was presented for > 15s,
+    // immediately tear down the socket first so the camera/HomeBase can clean up before backoff expires.
     if (m_playbackState == QMediaPlayer::PlayingState && m_hasVideo && m_autoReconnect && !m_reconnecting) {
-        if (m_timeSinceLastVideoFrame.isValid() && m_timeSinceLastVideoFrame.hasExpired(7000)) {
-            logWarning() << QString("Stalled video feed detected (no frames for 7s). Reconnecting: %1").arg(m_source.toString());
+        if (m_timeSinceLastVideoFrame.isValid() && m_timeSinceLastVideoFrame.hasExpired(15000)) {
+            logWarning() << QString("Stalled video feed detected (no frames for 15s). Closing socket and scheduling reconnect: %1").arg(m_source.toString());
+            cleanup();
             scheduleReconnect();
             return;
         }
@@ -398,6 +437,9 @@ void QmlAVPlayer::updateMetrics()
     m_presentedFramesCount = 0;
 
     if (m_demuxer) {
+        if (!m_hasAudio && m_demuxer->hasAudioStream()) {
+            setHasAudio(true);
+        }
         auto stat = m_demuxer->stat();
         setFramesDecoded(stat.value("videoFramesDecoded").toInt());
         setFramesDiscarded(stat.value("videoFramesDiscarded").toInt());

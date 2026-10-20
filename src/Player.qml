@@ -96,7 +96,7 @@ FocusScope {
     Timer {
         id: timer
 
-        interval: 50
+        interval: 150
 
         onTriggered: {
             if (root.visible) {
@@ -340,9 +340,7 @@ FocusScope {
             autoReconnect: typeof viewportSettings !== "undefined" ? viewportSettings.autoReconnect : true
 
             avOptions: {
-                var avOptions = root.avOptions;
-                Object.assignDefault(avOptions, layoutsCollectionSettings.toJSValue("defaultAVFormatOptions"));
-                return avOptions;
+                return Object.assignDefault({}, root.avOptions, layoutsCollectionSettings.toJSValue("defaultAVFormatOptions"));
             }
 
             onStatusChanged: {

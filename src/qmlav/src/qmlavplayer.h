@@ -29,7 +29,7 @@ class QmlAVPlayer : public QObject, public QQmlParserStatus
     QMLAV_PROPERTY_READONLY(QMediaPlayer::State, playbackState, playbackStateChanged) = QMediaPlayer::StoppedState;
     QMLAV_PROPERTY_READONLY(QMediaPlayer::MediaStatus, status, statusChanged) = QMediaPlayer::NoMedia;
     QMLAV_PROPERTY_READONLY(QVariant, bufferProgress, bufferProgressChanged) = 1.0;
-    QMLAV_PROPERTY(bool, muted, setMuted, mutedChanged) = false;
+    QMLAV_PROPERTY_DECL(bool, muted, setMuted, mutedChanged) = false;
     QMLAV_PROPERTY_DECL(double, volume, setVolume, volumeChanged) = 0.0;
     QMLAV_PROPERTY_READONLY(bool, hasVideo, hasVideoChanged) = false;
     QMLAV_PROPERTY_READONLY(bool, hasAudio, hasAudioChanged) = false;
@@ -47,8 +47,8 @@ class QmlAVPlayer : public QObject, public QQmlParserStatus
     QMLAV_PROPERTY(bool, autoReconnect, setAutoReconnect, autoReconnectChanged) = true;
     QMLAV_PROPERTY_READONLY(bool, reconnecting, reconnectingChanged) = false;
     QMLAV_PROPERTY_READONLY(int, reconnectAttempt, reconnectAttemptChanged) = 0;
-    QMLAV_PROPERTY(int, reconnectInterval, setReconnectInterval, reconnectIntervalChanged) = 2000;
-    QMLAV_PROPERTY(int, maxReconnectInterval, setMaxReconnectInterval, maxReconnectIntervalChanged) = 15000;
+    QMLAV_PROPERTY(int, reconnectInterval, setReconnectInterval, reconnectIntervalChanged) = 6000;
+    QMLAV_PROPERTY(int, maxReconnectInterval, setMaxReconnectInterval, maxReconnectIntervalChanged) = 30000;
     QMLAV_PROPERTY_READONLY(int, reconnectDelayMs, reconnectDelayMsChanged) = 0;
     QMLAV_PROPERTY_READONLY(QString, errorString, errorStringChanged) = QString();
 
@@ -72,6 +72,7 @@ public slots:
 
 protected:
     bool load();
+    void cleanup();
     void stateMachine();
     void reset();
     void scheduleReconnect();

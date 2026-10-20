@@ -543,8 +543,8 @@ FocusScope {
                                         }
 
                                         function getOptionsString(options) {
-                                            Object.assignDefault(options, layoutsCollectionSettings.toJSValue("defaultAVFormatOptions"));
-                                            return Utils.stringifyOptions(options);
+                                            var merged = Object.assignDefault({}, options, layoutsCollectionSettings.toJSValue("defaultAVFormatOptions"));
+                                            return Utils.stringifyOptions(merged);
                                         }
 
                                     }
