@@ -147,6 +147,9 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         if (avStream->codecpar) {
             m_sampleAspectRatio = avStream->codecpar->sample_aspect_ratio;
         }
+        if (m_context) {
+            setDropOnOverflow(m_context->clock.realTime);
+        }
 
         return true;
     }
@@ -282,6 +285,11 @@ QmlAVVideoDecoder::~QmlAVVideoDecoder()
     if (m_avCodecCtx) {
         av_buffer_unref(&m_avCodecCtx->hw_device_ctx);
     }
+}
+
+bool QmlAVVideoDecoder::isHWAccelerated() const
+{
+    return m_hwOutput != nullptr || (m_avCodecCtx && m_avCodecCtx->hw_device_ctx != nullptr);
 }
 
 bool QmlAVVideoDecoder::initVideoDecoder(const QmlAVOptions &avOptions)

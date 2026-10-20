@@ -377,7 +377,11 @@ private:
 
 class QmlAVThread
 {
+#if defined(_MSVC_LANG)
+    static_assert(_MSVC_LANG >= 201703L, "This QmlAVThread class expects a C++17 compatible compiler.");
+#else
     static_assert(__cplusplus >= 201703L, "This QmlAVThread class expects a C++17 compatible compiler.");
+#endif
 
 public:
     template<typename Callable, typename ...Args>

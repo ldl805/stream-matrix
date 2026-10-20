@@ -1,10 +1,15 @@
 #include "config.h"
 
 #include <QSettings>
+#include <QCoreApplication>
 #include <QLoggingCategory>
 
 Config::Config(QObject *parent)
-    : Config(QSettings().fileName(), parent)
+    : Config(QSettings(QSettings::IniFormat,
+                       QSettings::UserScope,
+                       QCoreApplication::organizationName(),
+                       QCoreApplication::applicationName()).fileName(),
+             parent)
 {
 }
 

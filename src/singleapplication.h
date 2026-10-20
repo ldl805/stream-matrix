@@ -30,7 +30,11 @@ private:
             runtimeDir = QStandardPaths::writableLocation(QStandardPaths::TempLocation);
         }
         QString appPath = QCoreApplication::applicationFilePath();
-        QString userKey = QString::fromLatin1(QCryptographicHash::hash((qgetenv("USER") + ":" + appPath.toUtf8()), QCryptographicHash::Sha1).toHex());
+        QByteArray user = qgetenv("USER");
+        if (user.isEmpty()) {
+            user = qgetenv("USERNAME");
+        }
+        QString userKey = QString::fromLatin1(QCryptographicHash::hash((user + ":" + appPath.toUtf8()), QCryptographicHash::Sha1).toHex());
         return runtimeDir + "/streammatrix-" + userKey + ".lock";
     }
 

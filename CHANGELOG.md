@@ -5,6 +5,18 @@ All notable changes to **StreamMatrix** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-10-20
+
+### Added
+- **Native Windows Support (`x86_64`)**: Full native Windows build and runtime support using Qt 5 and FFmpeg (`d3d11va` / `dxva2` hardware acceleration and multi-threaded software decoding).
+- **Windows Portable & Installer Packages**: Added automated `windeployqt` and runtime dependency bundling in CMake/CPack, producing standalone portable `.zip` archives (`stream-matrix-<version>-Windows-x86_64.zip`) and NSIS `.exe` installers (`stream-matrix-<version>-Windows-x86_64.exe`).
+- **Windows CI & Automated Release Publishing**: Extended GitHub Actions CI and Release workflows to automatically compile, test, and publish Windows `x86_64` packages alongside Linux `x86_64` and `arm64` packages.
+- **Hardware Acceleration Auto-Selection (`-hwaccel auto`)**: Added automatic hardware device selection (`d3d11va`/`dxva2` on Windows, `vaapi`/`drm` on Linux) and HUD `[HW]` detection for `hw_device_ctx`-backed decoders.
+
+### Fixed
+- **Windows Local File Path Handling & Playback Pacing**: Fixed `QUrl` local path resolution for Windows drive letters (`C:/...`), trimmed trailing slashes on RTSP stream paths (`/live2/` -> `/live2`), and disabled real-time packet overflow dropping for non-realtime local media files.
+- **Cross-Platform Signal, INI Settings & Lockfile Handling**: Added Windows console control handler (`SetConsoleCtrlHandler`), parent terminal console attachment for CLI flags (`--help`, `--version`), `QSettings::IniFormat` default config path on Windows, and `USERNAME` fallback for single-instance lockfiles.
+
 ## [2.0.0] - 2026-10-20
 
 ### Changed

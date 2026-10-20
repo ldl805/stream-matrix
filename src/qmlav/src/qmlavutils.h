@@ -6,7 +6,12 @@ extern "C" {
 #include <libavformat/avformat.h>
 }
 
+#if defined(__GNUG__)
 #include <cxxabi.h>
+#endif
+#if defined(_WIN32)
+#include <malloc.h>
+#endif
 
 #include <QLoggingCategory>
 
@@ -294,10 +299,14 @@ public:
     static QLoggingCategory &loggingCategory() { return m_loggingCategory; }
     template<typename T>
     static QString rttiTypeName([[maybe_unused]] const T &type) {
+#if defined(__GNUG__)
         char *n = abi::__cxa_demangle(typeid(T).name(), nullptr, nullptr, nullptr);
         QString ret(n);
         free(n);
         return ret;
+#else
+        return QString::fromLatin1(typeid(T).name());
+#endif
     }
     template<typename T>
     static QString logPrefix(const T *sender) {

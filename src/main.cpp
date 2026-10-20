@@ -6,8 +6,19 @@
 #include <QSocketNotifier>
 #include <QTimer>
 #include <csignal>
+#if defined(Q_OS_UNIX)
 #include <sys/socket.h>
 #include <unistd.h>
+#elif defined(Q_OS_WIN)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#include <cstdio>
+#endif
 
 #include "qmlavplayer.h"
 #include "context.h"
@@ -16,6 +27,7 @@
 #include "singleapplication.h"
 #include "viewportslayoutscollectionmodel.h"
 
+#if defined(Q_OS_UNIX)
 static int sigintFd[2];
 static int sigtermFd[2];
 
@@ -28,6 +40,33 @@ static void posixSignalHandler(int sig)
         [[maybe_unused]] auto res = ::write(sigtermFd[0], &a, sizeof(a));
     }
 }
+#elif defined(Q_OS_WIN)
+static BOOL WINAPI consoleCtrlHandler(DWORD ctrlType)
+{
+    switch (ctrlType) {
+    case CTRL_C_EVENT:
+    case CTRL_BREAK_EVENT:
+    case CTRL_CLOSE_EVENT:
+    case CTRL_LOGOFF_EVENT:
+    case CTRL_SHUTDOWN_EVENT:
+        qInfo() << "Console control event received (" << ctrlType << "), shutting down StreamMatrix...";
+        if (auto *app = QCoreApplication::instance()) {
+            QMetaObject::invokeMethod(app, &QCoreApplication::quit, Qt::QueuedConnection);
+        }
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
+static void winSignalHandler(int sig)
+{
+    qInfo() << "Signal received (" << sig << "), shutting down StreamMatrix...";
+    if (auto *app = QCoreApplication::instance()) {
+        QMetaObject::invokeMethod(app, &QCoreApplication::quit, Qt::QueuedConnection);
+    }
+}
+#endif
 
 class QuitShortcutFilter : public QObject
 {
@@ -131,6 +170,18 @@ void registerQmlTypes()
 
 int main(int argc, char *argv[])
 {
+#if defined(Q_OS_WIN)
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    HANDLE hErr = GetStdHandle(STD_ERROR_HANDLE);
+    if ((!hOut || hOut == INVALID_HANDLE_VALUE) && (!hErr || hErr == INVALID_HANDLE_VALUE)) {
+        if (AttachConsole(ATTACH_PARENT_PROCESS)) {
+            FILE *fp = nullptr;
+            freopen_s(&fp, "CONOUT$", "w", stdout);
+            freopen_s(&fp, "CONOUT$", "w", stderr);
+        }
+    }
+#endif
+
     QCoreApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
 
 #if defined(APP_NAME)
@@ -155,6 +206,7 @@ int main(int argc, char *argv[])
     QuitShortcutFilter quitFilter;
     app.installEventFilter(&quitFilter);
 
+#if defined(Q_OS_UNIX)
     if (::socketpair(AF_UNIX, SOCK_STREAM, 0, sigintFd) == 0 &&
         ::socketpair(AF_UNIX, SOCK_STREAM, 0, sigtermFd) == 0) {
         auto *snInt = new QSocketNotifier(sigintFd[1], QSocketNotifier::Read, &app);
@@ -181,6 +233,11 @@ int main(int argc, char *argv[])
         sigaction(SIGINT, &sa, nullptr);
         sigaction(SIGTERM, &sa, nullptr);
     }
+#elif defined(Q_OS_WIN)
+    SetConsoleCtrlHandler(consoleCtrlHandler, TRUE);
+    std::signal(SIGINT, winSignalHandler);
+    std::signal(SIGTERM, winSignalHandler);
+#endif
 
     QQmlApplicationEngine engine;
     QTranslator translator;
@@ -188,7 +245,11 @@ int main(int argc, char *argv[])
     if (translator.load(QLatin1String("stream-matrix_") + locale, QLatin1String(":/translations/"))) {
         app.installTranslator(&translator);
     }
-    app.setWindowIcon(QIcon(QLatin1String(":/images/stream-matrix.svg")));
+    QIcon appIcon(QLatin1String(":/images/stream-matrix.svg"));
+    if (appIcon.isNull() || appIcon.availableSizes().isEmpty()) {
+        appIcon = QIcon(QLatin1String(":/images/stream-matrix.ico"));
+    }
+    app.setWindowIcon(appIcon);
 
     Context::init();
 

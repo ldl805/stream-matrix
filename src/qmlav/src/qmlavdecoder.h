@@ -128,6 +128,7 @@ public:
     ~QmlAVVideoDecoder() override;
 
     std::shared_ptr<QmlAVHWOutput> hwOutput() const { return m_hwOutput; }
+    bool isHWAccelerated() const;
 
 protected:
     bool initVideoDecoder(const QmlAVOptions &avOptions) override;

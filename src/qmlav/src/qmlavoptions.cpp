@@ -67,8 +67,24 @@ AVHWDeviceType QmlAVOptions::avHWDeviceType() const
 {
     AVHWDeviceType type = AV_HWDEVICE_TYPE_NONE;
 
-    // TODO: Implement support for "auto" value
     find("hwaccel", [&](std::string value) {
+        if (value == "auto") {
+#if defined(_WIN32)
+            type = av_hwdevice_find_type_by_name("d3d11va");
+            if (type == AV_HWDEVICE_TYPE_NONE) {
+                type = av_hwdevice_find_type_by_name("dxva2");
+            }
+#elif defined(__linux__)
+            type = av_hwdevice_find_type_by_name("vaapi");
+            if (type == AV_HWDEVICE_TYPE_NONE) {
+                type = av_hwdevice_find_type_by_name("drm");
+            }
+#endif
+            if (type == AV_HWDEVICE_TYPE_NONE) {
+                type = av_hwdevice_iterate_types(AV_HWDEVICE_TYPE_NONE);
+            }
+            return;
+        }
         type = av_hwdevice_find_type_by_name(value.c_str());
         if (type == AV_HWDEVICE_TYPE_NONE) {
             logWarning() << "Device type \"" << value << "\" is not supported!";

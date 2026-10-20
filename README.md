@@ -3,9 +3,9 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus)](https://isocpp.org/)
 [![Qt Framework](https://img.shields.io/badge/Qt-5.15%20%7C%206.x-41CD52?logo=qt)](https://www.qt.io/)
-[![Platform: Linux & Raspberry Pi](https://img.shields.io/badge/Platform-Linux%20%7C%20Raspberry%20Pi-C51A4A?logo=raspberrypi)](https://www.raspberrypi.com/)
+[![Platform: Linux, Windows & Raspberry Pi](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Raspberry%20Pi-C51A4A?logo=raspberrypi)](https://www.raspberrypi.com/)
 
-**StreamMatrix** is a high-performance, low-latency video matrix application designed for monitoring multiple live RTSP, RTMP, HTTP, and local video feeds simultaneously. Built with Qt Quick (QML) and FFmpeg, it is specifically tuned for optimal resource efficiency on desktop Linux and embedded systems like the **Raspberry Pi 4 and Raspberry Pi 5**.
+**StreamMatrix** is a high-performance, low-latency video matrix application designed for monitoring multiple live RTSP, RTMP, HTTP, and local video feeds simultaneously. Built with Qt Quick (QML) and FFmpeg, it runs natively on **Linux**, **Windows (x86_64)**, and embedded systems like the **Raspberry Pi 4 and Raspberry Pi 5**.
 
 ---
 
@@ -134,6 +134,38 @@ flatpak-builder --user --install --force-clean build-flatpak org.streammatrix.St
 
 # 4. Run StreamMatrix
 flatpak run org.streammatrix.StreamMatrix
+```
+
+### Windows Build & Packaging (MSYS2 / MinGW-w64)
+
+Pre-compiled Windows portable `.zip` and NSIS `.exe` installers are available on the [GitHub Releases](https://github.com/ldl805/stream-matrix/releases) page. To build from source on Windows using [MSYS2](https://www.msys2.org/) (`MINGW64`):
+
+```bash
+# 1. Install build tools, Qt 5, FFmpeg, GTest, and NSIS
+pacman -S --needed \
+    mingw-w64-x86_64-gcc \
+    mingw-w64-x86_64-cmake \
+    mingw-w64-x86_64-ninja \
+    mingw-w64-x86_64-pkgconf \
+    mingw-w64-x86_64-gtest \
+    mingw-w64-x86_64-nsis \
+    mingw-w64-x86_64-qt5-base \
+    mingw-w64-x86_64-qt5-declarative \
+    mingw-w64-x86_64-qt5-multimedia \
+    mingw-w64-x86_64-qt5-quickcontrols \
+    mingw-w64-x86_64-qt5-quickcontrols2 \
+    mingw-w64-x86_64-qt5-graphicaleffects \
+    mingw-w64-x86_64-qt5-svg \
+    mingw-w64-x86_64-qt5-tools \
+    mingw-w64-x86_64-ffmpeg
+
+# 2. Configure, build, and run unit tests
+cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+ctest --test-dir build --output-on-failure
+
+# 3. Package standalone ZIP archive and NSIS installer
+cpack --config build/CPackConfig.cmake -B build -G "ZIP;NSIS"
 ```
 
 ---

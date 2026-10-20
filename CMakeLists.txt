@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 
 set(VER_MAJ 2)
-set(VER_MIN 0)
+set(VER_MIN 1)
 set(VER_PAT 0)
 # set(REL_STATUS "alpha")
 
@@ -64,9 +64,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Fix build on LP for Ubuntu 20.04
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+if (NOT MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT ANDROID)
+if(CMAKE_BUILD_TYPE STREQUAL "Debug" AND NOT ANDROID AND NOT MSVC)
     add_compile_options(
         -Wall
         -Wextra
@@ -103,6 +105,9 @@ if (ANDROID)
         "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/lib/libavfilter.so"
         )
 else()
+    if (WIN32)
+        list(APPEND QT_LINK_DEPENDENCIES Svg)
+    endif()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(LIBAV REQUIRED
         libavformat
@@ -113,6 +118,7 @@ else()
         libavdevice
     )
     include_directories(${LIBAV_INCLUDE_DIRS})
+    link_directories(${LIBAV_LIBRARY_DIRS})
 endif()
 
 find_package(Qt5 5.12 COMPONENTS ${QT_LINK_DEPENDENCIES} LinguistTools REQUIRED)
@@ -149,6 +155,9 @@ if (ANDROID)
 
     target_include_directories(stream-matrix PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/include")
     target_link_directories(stream-matrix PRIVATE "${CMAKE_SOURCE_DIR}/src/qmlav/3rd/FFmpeg/ffbuild/${ANDROID_ABI}/lib")
+elseif (WIN32)
+    list(APPEND PROJ_FILES win32.rc)
+    add_executable(stream-matrix WIN32 ${PROJ_FILES} ${QMLAV_FILES})
 else()
     add_executable(stream-matrix ${PROJ_FILES} ${QMLAV_FILES})
 endif()
@@ -190,4 +199,80 @@ if (UNIX AND NOT ANDROID)
     set(CPACK_DEBIAN_PACKAGE_SECTION "video")
     set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS ON)
     include(CPack)
+elseif (WIN32)
+    install(TARGETS stream-matrix RUNTIME DESTINATION .)
+    install(FILES "${CMAKE_SOURCE_DIR}/LICENSE" "${CMAKE_SOURCE_DIR}/README.md" DESTINATION .)
+    install(FILES "${CMAKE_SOURCE_DIR}/images/stream-matrix.ico" "${CMAKE_SOURCE_DIR}/images/stream-matrix.svg" DESTINATION images)
+
+    find_program(WINDEPLOYQT_EXECUTABLE NAMES windeployqt-qt5 windeployqt HINTS "${_qt5Core_install_prefix}/bin")
+    get_filename_component(COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+
+    install(CODE "
+        set(EXE_PATH \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/stream-matrix.exe\")
+        if(EXISTS \"\${EXE_PATH}\")
+            if(EXISTS \"${WINDEPLOYQT_EXECUTABLE}\")
+                message(STATUS \"Running windeployqt on \${EXE_PATH}...\")
+                execute_process(
+                    COMMAND \"${WINDEPLOYQT_EXECUTABLE}\"
+                        --release
+                        --no-translations
+                        --no-angle
+                        --no-opengl-sw
+                        --qmldir \"${CMAKE_SOURCE_DIR}/src\"
+                        \"\${EXE_PATH}\"
+                    RESULT_VARIABLE WINDEPLOYQT_RES
+                )
+            endif()
+
+            if(POLICY CMP0207)
+                cmake_policy(SET CMP0207 NEW)
+            endif()
+            file(GLOB DEPLOYED_DLLS \"\$ENV{DESTDIR}\${CMAKE_INSTALL_PREFIX}/*.dll\")
+            file(GET_RUNTIME_DEPENDENCIES
+                EXECUTABLES \"\${EXE_PATH}\"
+                LIBRARIES \${DEPLOYED_DLLS}
+                RESOLVED_DEPENDENCIES_VAR RESOLVED_DEPS
+                UNRESOLVED_DEPENDENCIES_VAR UNRESOLVED_DEPS
+                DIRECTORIES \"${COMPILER_BIN_DIR}\" ${LIBAV_LIBRARY_DIRS}
+                PRE_EXCLUDE_REGEXES \"^api-ms-.*\" \"^ext-ms-.*\"
+                POST_EXCLUDE_REGEXES \".*[Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\\\\\][Ss][Yy][Ss][Tt][Ee][Mm]32[/\\\\\\\\].*\" \".*[Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\\\\\][Ss][Yy][Ss][Ww][Oo][Ww]64[/\\\\\\\\].*\"
+            )
+            foreach(DEP \${RESOLVED_DEPS})
+                file(INSTALL DESTINATION \"\${CMAKE_INSTALL_PREFIX}\" TYPE SHARED_LIBRARY FILES \"\${DEP}\")
+            endforeach()
+        endif()
+    ")
+
+    set(PACKAGE_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+    if(PACKAGE_ARCH STREQUAL "AMD64")
+        set(PACKAGE_ARCH "x86_64")
+    endif()
+
+    set(CPACK_PACKAGE_NAME "stream-matrix")
+    set(CPACK_PACKAGE_VENDOR "StreamMatrix")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "High-performance video matrix application for live RTSP feeds")
+    set(CPACK_PACKAGE_VERSION_MAJOR ${VER_MAJ})
+    set(CPACK_PACKAGE_VERSION_MINOR ${VER_MIN})
+    set(CPACK_PACKAGE_VERSION_PATCH ${VER_PAT})
+    set(CPACK_PACKAGE_INSTALL_DIRECTORY "StreamMatrix")
+    set(CPACK_PACKAGE_FILE_NAME "${CPACK_PACKAGE_NAME}-${VER_MAJ}.${VER_MIN}.${VER_PAT}-${CMAKE_SYSTEM_NAME}-${PACKAGE_ARCH}")
+    set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_SOURCE_DIR}/LICENSE")
+    set(CPACK_PACKAGE_EXECUTABLES "stream-matrix" "StreamMatrix")
+    set(CPACK_CREATE_DESKTOP_LINKS "stream-matrix")
+
+    find_program(MAKENSIS_EXECUTABLE makensis)
+    if(MAKENSIS_EXECUTABLE)
+        set(CPACK_GENERATOR "ZIP;NSIS")
+        set(CPACK_NSIS_DISPLAY_NAME "StreamMatrix")
+        set(CPACK_NSIS_PACKAGE_NAME "StreamMatrix")
+        set(CPACK_NSIS_MUI_ICON "${CMAKE_SOURCE_DIR}/images\\\\stream-matrix.ico")
+        set(CPACK_NSIS_MUI_UNIICON "${CMAKE_SOURCE_DIR}/images\\\\stream-matrix.ico")
+        set(CPACK_NSIS_INSTALLED_ICON_NAME "stream-matrix.exe")
+        set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
+        set(CPACK_NSIS_MODIFY_PATH OFF)
+    else()
+        set(CPACK_GENERATOR "ZIP")
+    endif()
+    include(CPack)
 endif()
+

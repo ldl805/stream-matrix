@@ -1,5 +1,7 @@
 #include "qmlavdemuxer.h"
 
+#include <QFileInfo>
+
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavdevice/avdevice.h>
@@ -67,10 +69,14 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
         return;
     }
 
-    // TODO: Only Unix systems are supported
     if (url.isLocalFile()) {
         avdevice_register_all();
         source = url.toLocalFile();
+    } else if (QFileInfo::exists(source)) {
+        avdevice_register_all();
+    } else if (url.scheme().startsWith(QLatin1String("rtsp"), Qt::CaseInsensitive) &&
+               url.path().length() > 1 && source.endsWith(QLatin1Char('/'))) {
+        source.chop(1);
     }
 
     if (source.isEmpty()) {
@@ -277,7 +283,7 @@ int64_t QmlAVDemuxer::bitrate() const
 bool QmlAVDemuxer::isHWAccelerated() const
 {
     if (m_context && m_context->videoDecoder) {
-        return m_context->videoDecoder->hwOutput() != nullptr;
+        return m_context->videoDecoder->isHWAccelerated();
     }
     return false;
 }
