@@ -134,19 +134,40 @@ jobs:
     needs: [build, build-windows]
     runs-on: ubuntu-latest
     steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
     - name: Download all packages
       uses: actions/download-artifact@v4
       with:
         path: release_packages
         merge-multiple: true
 
+    - name: Extract Release Notes from CHANGELOG.md
+      run: |
+        VERSION="${GITHUB_REF_NAME#v}"
+        awk -v ver="$VERSION" '
+          $0 ~ "^## \\[" ver "\\]" { found=1; next }
+          found && /^## \[/ { exit }
+          found && /^\[.*\]: https:\/\// { exit }
+          found { print }
+        ' CHANGELOG.md > release_notes.md
+        PREV_TAG=$(git tag --sort=-creatordate | grep -v "^${GITHUB_REF_NAME}$" | head -n 1 || true)
+        if [ -n "$PREV_TAG" ]; then
+          echo "" >> release_notes.md
+          echo "**Full Changelog**: https://github.com/${GITHUB_REPOSITORY}/compare/${PREV_TAG}...${GITHUB_REF_NAME}" >> release_notes.md
+        fi
+
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
       with:
+        name: StreamMatrix ${{ github.ref_name }}
+        body_path: release_notes.md
         files: |
           release_packages/*.tar.gz
           release_packages/*.deb
           release_packages/*.zip
           release_packages/*.exe
-        generate_release_notes: true
         make_latest: true

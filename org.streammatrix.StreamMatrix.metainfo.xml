@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.1.1" date="2026-10-25">
+      <description>
+        <p>Added missing Debian 13 (Trixie) QML runtime and GTest dependencies, made GTest unit test compilation optional via BUILD_TESTING, added QML runtime dependencies to Debian package metadata, and refined documentation and changelog.</p>
+      </description>
+    </release>
     <release version="2.1.0" date="2026-10-20">
       <description>
         <p>Added native Windows x86_64 support, portable ZIP and NSIS installer packaging, D3D11VA/DXVA2 hardware decoding support, and local file playback improvements.</p>

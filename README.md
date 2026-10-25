@@ -1,50 +1,34 @@
 # StreamMatrix
 
+[![Latest Release](https://img.shields.io/github/v/release/ldl805/stream-matrix?color=blue&logo=github)](https://github.com/ldl805/stream-matrix/releases/latest)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus)](https://isocpp.org/)
 [![Qt Framework](https://img.shields.io/badge/Qt-5.15%20%7C%206.x-41CD52?logo=qt)](https://www.qt.io/)
 [![Platform: Linux, Windows & Raspberry Pi](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows%20%7C%20Raspberry%20Pi-C51A4A?logo=raspberrypi)](https://www.raspberrypi.com/)
 
-**StreamMatrix** is a high-performance, low-latency video matrix application designed for monitoring multiple live RTSP, RTMP, HTTP, and local video feeds simultaneously. Built with Qt Quick (QML) and FFmpeg, it runs natively on **Linux**, **Windows (x86_64)**, and embedded systems like the **Raspberry Pi 4 and Raspberry Pi 5**.
+**StreamMatrix** is a high-performance, low-latency video matrix application for monitoring multiple live RTSP, RTMP, HTTP, and local video feeds simultaneously. Built with Qt Quick (QML) and FFmpeg, it runs natively on **Linux (`x86_64` & `arm64`)**, **Windows (`x86_64`)**, and single-board computers like the **Raspberry Pi 4 & 5**.
 
 ---
 
-## 🌟 Acknowledgement & Origins
+## 📦 Installation
 
-StreamMatrix is an independent, modernized fork of the wonderful [**CCTV Viewer**](https://github.com/iEvgeny/cctv-viewer) project originally created by **Evgeny S. Maksimov ([@iEvgeny](https://github.com/iEvgeny))**. 
+Download pre-built packages from the [**Latest GitHub Release**](https://github.com/ldl805/stream-matrix/releases/latest):
 
-We extend our sincere gratitude to Evgeny for establishing the foundational architecture and QML AV pipeline. As upstream development slowed down, this fork was created to:
-- Actively maintain and modernize the codebase for newer Linux environments (Debian 12/13 Trixie, Raspberry Pi OS).
-- Deliver native support for modern Wayland compositors (`labwc`, `wayfire`) and X11.
-- Optimize multi-stream hardware acceleration (DRM, VA-API) to allow smooth, low-power playback of high-resolution IP camera grids on single-board computers like the Raspberry Pi 5.
-- Introduce critical reliability features including stream health diagnostics, automated reconnection watchdog, and dual-profile sub-stream management.
+| Platform | Architecture | Package Format | Quick Install / Usage |
+| :--- | :--- | :--- | :--- |
+| **Windows** | `x86_64` | `.exe` Installer / `.zip` Portable | Run `stream-matrix-<ver>-Windows-x86_64.exe` or extract the `.zip` archive |
+| **Debian / Ubuntu / Raspberry Pi OS** | `amd64` / `arm64` | `.deb` Package | `sudo apt install ./stream-matrix_<ver>_<arch>.deb` |
+| **Generic Linux** | `x86_64` / `aarch64` | `.tar.gz` Archive | Extract archive and run `bin/stream-matrix` |
 
 ---
 
-## 🚀 Key Features & Enhancements
+## ✨ Key Features
 
-### ⚡ Performance & Hardware Acceleration
-- **Raspberry Pi 5 & 4 Tuned**: Seamless out-of-the-box hardware decoding (`-hwaccel drm`) and smooth Wayland/Labwc rendering.
-- **Cached `SwsContext` Scaling**: Eliminates per-frame memory allocation/deallocation churn and scaling bottleneck, reducing CPU load.
-- **Zero-Copy Video Path**: Improved GLX and DRM texture handling with dynamic resolution change support.
-- **Thread-Safe Glitch-Free Audio**: Overhauled audio I/O pipeline with continuous frame buffering and thread synchronization, eliminating audio stuttering and buffer underruns.
-- **Deadlock-Free Shutdown**: Interrupt-aware producer/consumer queues prevent deadlocks and hung processes on exit.
-
-### 📊 Diagnostics & Stream Health
-- **Live Stream Diagnostics HUD**: Press <kbd>D</kbd> to toggle an on-screen HUD displaying real-time **FPS**, **Resolution**, **Video Codec**, **Hardware Acceleration status `[HW]`**, and **Bitrate**.
-- **Interactive Reconnection & Retry Status Screen**:
-  - **Tactile Button Confirmation**: Clicking the "Retry Now" button provides instantaneous visual feedback—transforming into an active `"Retrying..."` state with an animated spinner, debounced to prevent duplicate reconnection storms.
-  - **Live Progress & Backoff Countdown**: The reconnect overlay keeps you informed at every stage, showing active connection attempts (`"Connecting (attempt N)..."`, `"Attempting connection to stream..."`) and a real-time second-by-second countdown (`"Retrying in Xs (attempt N)..."`) during exponential backoff.
-  - **Detailed Connection Error Diagnostics**: Unveils the exact root cause behind feed failures directly from FFmpeg (e.g., `"Error: Connection refused"`, `"Error: Connection timed out"`, `"Error: Server returned 404 Not Found"`, `"Error: No route to host"`).
-- **Auto-Reconnect Watchdog**: Automatically detects dropped feeds or frozen video streams (watchdog triggers after 7s without frames) and executes exponential backoff recovery without freezing the UI or blocking worker threads.
-- **Dual-Profile Resolution Switching**: Configure a high-resolution main stream (`URL`) and low-bandwidth sub-stream (`Sub-Stream URL`) per camera. The grid automatically renders lightweight sub-streams and seamlessly elevates to full resolution upon double-clicking into full-screen.
-
-### 🖥️ Modernized UI & System Integration
-- **Unified Blue Branding**: Clean, modern blue application icon and UI accents designed for high contrast and clarity on both desktop Linux and wall-mounted monitoring displays.
-- **Quote-Aware FFmpeg Parser**: Tokenizer supports complex arguments and quoted options (e.g. `-rtsp_transport tcp -fflags nobuffer`).
-- **Multi-User Safe**: Instance locking uses user-isolated runtime paths (`$XDG_RUNTIME_DIR`), allowing multiple users to run isolated instances concurrently.
-- **Smart Wayland/X11 Launcher**: Automatically detects active display sockets when launched from desktop shortcuts, systemd services, or SSH.
-- **Customizable Layouts & Presets**: Flexible $M \times N$ grid layouts with span adjustments, digital pan/zoom, preset carousel cycling, and kiosk mode.
+- **Low-Latency Multi-Stream Engine**: Hardware-accelerated decoding (`vaapi`, `drm`, `d3d11va`, `dxva2`, or `auto`) paired with multi-threaded ARM NEON / x86 software decoding, keyframe-aware queue management, and zero-overhead muted audio bypass.
+- **Dual-Profile Sub-Stream Switching**: Configure both a primary `URL` and a lightweight `Sub-Stream URL` per camera—automatically displaying low-bandwidth sub-streams in grid view and switching to full resolution in full-screen.
+- **Automated Watchdog & Reconnection UI**: Detects dropped connections or stalled feeds (7s frame watchdog) with immediate socket teardown, exponential backoff countdowns, FFmpeg root-cause diagnostics, and a debounced **Retry Now** control.
+- **Live Stream Diagnostics HUD**: Toggle an on-screen overlay (<kbd>D</kbd>) showing real-time **FPS**, **Resolution**, **Codec**, **Hardware Acceleration `[HW]`**, and **Bitrate** per viewport.
+- **Flexible Layouts & Presets**: Customizable $M \times N$ grids with viewport spanning, digital pan/zoom, preset carousel cycling, kiosk mode, and native **Wayland** & **X11** support.
 
 ---
 
@@ -54,114 +38,65 @@ We extend our sincere gratitude to Evgeny for establishing the foundational arch
 | :--- | :--- |
 | <kbd>F11</kbd> / <kbd>Double Click</kbd> | Toggle Full-Screen Mode |
 | <kbd>D</kbd> | Toggle Stream Diagnostics HUD (FPS, Bitrate, Codec, Resolution) |
-| <kbd>M</kbd> | Toggle Mute/Unmute for Selected Viewport |
-| <kbd>Alt</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Switch Directly to Preset 1 through 9 |
+| <kbd>M</kbd> | Toggle Mute / Unmute for Selected Viewport |
+| <kbd>Alt</kbd> + <kbd>1</kbd> .. <kbd>9</kbd> | Switch Directly to Preset 1–9 |
 | <kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd> | Switch to Previous / Next Preset |
 | <kbd>Space</kbd> | Pause / Resume Preset Carousel |
-| <kbd>Esc</kbd> | Exit Full-Screen or Deselect |
-| <kbd>Ctrl</kbd> + <kbd>Q</kbd> | Quit Application |
+| <kbd>Esc</kbd> | Exit Full-Screen or Deselect Viewport |
+| <kbd>Ctrl</kbd> + <kbd>Q</kbd> / <kbd>Q</kbd> | Quit Application |
 
 ---
 
-## 🛠️ Building & Installing
+## ⚙️ Recommended RTSP Configuration
 
-### Prerequisites (Debian / Ubuntu / Raspberry Pi OS)
+In **Settings → Viewport → Default FFmpeg options**, the following defaults are pre-configured for reliable, low-latency RTSP streaming:
+
+```text
+-rtsp_transport tcp -fflags nobuffer -timeout 20000000 -probesize 5000000 -analyzeduration 5000000
+```
+
+> **Raspberry Pi 5 Note:** The BCM2712 CPU decodes H.264 streams in software using multi-threaded ARM NEON instructions (hardware decode on Pi 5 is dedicated to HEVC/H.265). Leave `-hwaccel drm` off for H.264 feeds.
+
+---
+
+## 🛠️ Building from Source
+
+### Debian / Ubuntu / Raspberry Pi OS
 
 ```bash
+# 1. Install build & runtime dependencies (compatible with Debian 12/13 & Ubuntu 22.04/24.04)
 sudo apt update
 sudo apt install -y \
-    build-essential \
-    cmake \
-    pkg-config \
-    libgtest-dev \
-    qtbase5-dev \
-    qtdeclarative5-dev \
-    qtmultimedia5-dev \
-    qttools5-dev \
-    qttools5-dev-tools \
-    qml-module-qtquick2 \
-    qml-module-qtquick-layouts \
-    qml-module-qtquick-controls \
-    qml-module-qtquick-controls2 \
-    qml-module-qtquick-dialogs \
-    qml-module-qtquick-window2 \
-    qml-module-qt-labs-settings \
-    qml-module-qtmultimedia \
-    qml-module-qtgraphicaleffects \
-    libavformat-dev \
-    libavcodec-dev \
-    libavutil-dev \
-    libswscale-dev \
-    libswresample-dev \
-    libavdevice-dev \
-    libva-dev
-```
+    build-essential cmake pkg-config libgtest-dev \
+    qtbase5-dev qtdeclarative5-dev qtmultimedia5-dev qttools5-dev qttools5-dev-tools \
+    qml-module-qtquick2 qml-module-qtquick-layouts qml-module-qtquick-controls \
+    qml-module-qtquick-controls2 qml-module-qtquick-dialogs qml-module-qtquick-window2 \
+    qml-module-qt-labs-settings qml-module-qtmultimedia qml-module-qtgraphicaleffects \
+    libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev \
+    libavdevice-dev libva-dev
 
-### Clone & Build
-
-Clone the repository recursively to fetch all dependencies:
-
-```bash
-git clone --recurse-submodules https://github.com/ldl805/stream-matrix.git
+# 2. Clone, configure, and compile (pass -DBUILD_TESTING=OFF to skip unit tests)
+git clone https://github.com/ldl805/stream-matrix.git
 cd stream-matrix
-
-# Configure and build
 cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
 cmake --build build -j$(nproc)
-```
 
-### Install System-Wide
-
-```bash
+# 3. Install system-wide (or launch locally via ./run.sh)
 sudo cmake --install build
 ```
 
-Or run directly from the build directory using the included launcher:
-```bash
-./run.sh
-```
-
-### Flatpak Build & Run
-
-To build and run StreamMatrix as a universal, sandboxed Flatpak package:
+<details>
+<summary><strong>Windows Build & Packaging (MSYS2 / MinGW-w64)</strong></summary>
 
 ```bash
-# 1. Install flatpak and flatpak-builder
-sudo apt install -y flatpak flatpak-builder
-
-# 2. Add Flathub and install the KDE 5.15 runtime & SDK
-flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-flatpak install -y flathub org.kde.Platform//5.15-25.08 org.kde.Sdk//5.15-25.08
-
-# 3. Build and install locally
-flatpak-builder --user --install --force-clean build-flatpak org.streammatrix.StreamMatrix.yaml
-
-# 4. Run StreamMatrix
-flatpak run org.streammatrix.StreamMatrix
-```
-
-### Windows Build & Packaging (MSYS2 / MinGW-w64)
-
-Pre-compiled Windows portable `.zip` and NSIS `.exe` installers are available on the [GitHub Releases](https://github.com/ldl805/stream-matrix/releases) page. To build from source on Windows using [MSYS2](https://www.msys2.org/) (`MINGW64`):
-
-```bash
-# 1. Install build tools, Qt 5, FFmpeg, GTest, and NSIS
+# 1. Install toolchain, Qt 5, FFmpeg, GTest, and NSIS in MSYS2 MINGW64
 pacman -S --needed \
-    mingw-w64-x86_64-gcc \
-    mingw-w64-x86_64-cmake \
-    mingw-w64-x86_64-ninja \
-    mingw-w64-x86_64-pkgconf \
-    mingw-w64-x86_64-gtest \
-    mingw-w64-x86_64-nsis \
-    mingw-w64-x86_64-qt5-base \
-    mingw-w64-x86_64-qt5-declarative \
-    mingw-w64-x86_64-qt5-multimedia \
-    mingw-w64-x86_64-qt5-quickcontrols \
-    mingw-w64-x86_64-qt5-quickcontrols2 \
-    mingw-w64-x86_64-qt5-graphicaleffects \
-    mingw-w64-x86_64-qt5-svg \
-    mingw-w64-x86_64-qt5-tools \
-    mingw-w64-x86_64-ffmpeg
+    mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja \
+    mingw-w64-x86_64-pkgconf mingw-w64-x86_64-gtest mingw-w64-x86_64-nsis \
+    mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-declarative \
+    mingw-w64-x86_64-qt5-multimedia mingw-w64-x86_64-qt5-quickcontrols \
+    mingw-w64-x86_64-qt5-quickcontrols2 mingw-w64-x86_64-qt5-graphicaleffects \
+    mingw-w64-x86_64-qt5-svg mingw-w64-x86_64-qt5-tools mingw-w64-x86_64-ffmpeg
 
 # 2. Configure, build, and run unit tests
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -171,26 +106,25 @@ ctest --test-dir build --output-on-failure
 # 3. Package standalone ZIP archive and NSIS installer
 cpack --config build/CPackConfig.cmake -B build -G "ZIP;NSIS"
 ```
+</details>
 
----
+<details>
+<summary><strong>Flatpak Build & Run</strong></summary>
 
-## ⚙️ Configuration & Hardware Acceleration
+```bash
+sudo apt install -y flatpak flatpak-builder
+flatpak remote-add --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+flatpak install -y flathub org.kde.Platform//5.15-25.08 org.kde.Sdk//5.15-25.08
 
-### Recommended RTSP FFmpeg Options
-In **Settings → Viewport → Default FFmpeg options**, the following defaults are pre-configured for low latency and robust streaming:
-```text
--rtsp_transport tcp -fflags nobuffer -timeout 20000000 -probesize 5000000 -analyzeduration 5000000
+flatpak-builder --user --install --force-clean build-flatpak org.streammatrix.StreamMatrix.yaml
+flatpak run org.streammatrix.StreamMatrix
 ```
-*(Note for Raspberry Pi 5: The BCM2712 CPU handles H.264 streams using multi-threaded NEON software decode; hardware decoding on Pi 5 is reserved for HEVC/H.265. Omit `-hwaccel drm` for H.264 feeds).*
-
-### Common Camera RTSP Formats
-- **Main Stream**: `rtsp://username:password@192.168.1.50:554/stream1`
-- **Sub Stream**: `rtsp://username:password@192.168.1.50:554/stream2`
+</details>
 
 ---
 
-## 📜 License & Credits
+## 📜 Origins & License
 
-- **StreamMatrix** is licensed under the [GNU General Public License v3.0](LICENSE).
-- Based on [cctv-viewer](https://github.com/iEvgeny/cctv-viewer) &copy; Evgeny S. Maksimov.
-- Uses [FFmpeg](https://ffmpeg.org/) (LGPL/GPL) and the [Qt Framework](https://www.qt.io/) (LGPLv3/GPLv3).
+- **StreamMatrix** is an independent, modernized fork of [**CCTV Viewer**](https://github.com/iEvgeny/cctv-viewer), originally created by **Evgeny S. Maksimov ([@iEvgeny](https://github.com/iEvgeny))**. We thank Evgeny for establishing the foundational architecture and QML AV pipeline.
+- Licensed under the [GNU General Public License v3.0](LICENSE).
+- Powered by [FFmpeg](https://ffmpeg.org/) (LGPL/GPL) and the [Qt Framework](https://www.qt.io/) (LGPLv3/GPLv3).

@@ -1,124 +1,176 @@
 # Changelog
 
-All notable changes to **StreamMatrix** will be documented in this file.
+All notable changes to **StreamMatrix** are documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.1] - 2026-10-25
+
+> **Release Summary:** Resolves source-build and QML runtime dependency issues on fresh Debian 13 (Trixie) and Ubuntu installations ([#1](https://github.com/ldl805/stream-matrix/issues/1)), makes Google Test optional during CMake configuration, embeds QML runtime package dependencies into `.deb` installers, and streamlines project documentation and release notes.
+
+### Added
+- **Optional Unit Test Compilation (`BUILD_TESTING`)**: Added the standard `BUILD_TESTING` CMake option (enabled by default, disable via `-DBUILD_TESTING=OFF`) in `src/qmlav/CMakeLists.txt` to allow building StreamMatrix without compiling the unit test suite.
+- **Graceful Google Test Detection**: Updated `src/qmlav/src/tests/CMakeLists.txt` to probe for Google Test using `find_package(GTest QUIET)` instead of `REQUIRED`, automatically skipping unit test compilation with a status message when `libgtest-dev` is not installed ([#1](https://github.com/ldl805/stream-matrix/issues/1)).
+- **Debian `.deb` Runtime QML Dependencies**: Added explicit Qt5 QML runtime module dependencies (`qml-module-qtquick2`, `qml-module-qtquick-layouts`, `qml-module-qtquick-controls`, `qml-module-qtquick-controls2`, `qml-module-qtquick-dialogs`, `qml-module-qtquick-window2`, `qml-module-qt-labs-settings`, `qml-module-qtmultimedia`, `qml-module-qtgraphicaleffects`) to `CPACK_DEBIAN_PACKAGE_DEPENDS` so `apt install ./stream-matrix_*.deb` pulls in all required QML plugins automatically.
+- **Automated Release Changelog Extraction**: Updated `.github/workflows/release.yml` to automatically populate GitHub Release notes directly from `CHANGELOG.md` whenever a version tag is pushed.
+
+### Fixed
+- **Missing Debian 13 (Trixie) Build & Runtime Dependencies**: Added `libgtest-dev`, `qml-module-qtquick-controls`, `qml-module-qtquick-dialogs`, and `qml-module-qt-labs-settings` to the Debian/Ubuntu installation instructions in `README.md`, fixing `QQmlApplicationEngine failed to load component` (`Qt.labs.settings`, `QtQuick.Dialogs`, and `QtQuick.Controls 1.2` `MessageDialog`) startup failures on fresh Debian 13 systems ([#1](https://github.com/ldl805/stream-matrix/issues/1)).
+
+### Changed
+- **Documentation & Changelog Cleanup**: Decluttered `README.md` with a quick-install package table, concise feature summaries, and collapsible platform build sections; expanded `CHANGELOG.md` with release summaries, complete version histories, and comparison links.
 
 ## [2.1.0] - 2026-10-20
 
+> **Release Summary:** Introduces native Windows (`x86_64`) support with D3D11VA/DXVA2 hardware decoding, automated portable `.zip` and NSIS `.exe` installer packaging, and multi-platform CI/CD release publishing.
+
 ### Added
-- **Native Windows Support (`x86_64`)**: Full native Windows build and runtime support using Qt 5 and FFmpeg (`d3d11va` / `dxva2` hardware acceleration and multi-threaded software decoding).
-- **Windows Portable & Installer Packages**: Added automated `windeployqt` and runtime dependency bundling in CMake/CPack, producing standalone portable `.zip` archives (`stream-matrix-<version>-Windows-x86_64.zip`) and NSIS `.exe` installers (`stream-matrix-<version>-Windows-x86_64.exe`).
+- **Native Windows Support (`x86_64`)**: Full native Windows build and runtime support using Qt 5 and FFmpeg (`d3d11va` / `dxva2` GPU hardware acceleration and multi-threaded software decoding).
+- **Windows Portable & Installer Packages**: Added automated `windeployqt` and MinGW/FFmpeg DLL runtime dependency bundling in CMake/CPack, producing standalone portable `.zip` archives (`stream-matrix-<version>-Windows-x86_64.zip`) and NSIS `.exe` installers (`stream-matrix-<version>-Windows-x86_64.exe`).
 - **Windows CI & Automated Release Publishing**: Extended GitHub Actions CI and Release workflows to automatically compile, test, and publish Windows `x86_64` packages alongside Linux `x86_64` and `arm64` packages.
 - **Hardware Acceleration Auto-Selection (`-hwaccel auto`)**: Added automatic hardware device selection (`d3d11va`/`dxva2` on Windows, `vaapi`/`drm` on Linux) and HUD `[HW]` detection for `hw_device_ctx`-backed decoders.
 
 ### Fixed
-- **Windows Local File Path Handling & Playback Pacing**: Fixed `QUrl` local path resolution for Windows drive letters (`C:/...`), trimmed trailing slashes on RTSP stream paths (`/live2/` -> `/live2`), and disabled real-time packet overflow dropping for non-realtime local media files.
-- **Cross-Platform Signal, INI Settings & Lockfile Handling**: Added Windows console control handler (`SetConsoleCtrlHandler`), parent terminal console attachment for CLI flags (`--help`, `--version`), `QSettings::IniFormat` default config path on Windows, and `USERNAME` fallback for single-instance lockfiles.
+- **Windows Local File Path Handling & Playback Pacing**: Fixed `QUrl` local path resolution for Windows drive letters (`C:/...`), trimmed trailing slashes on RTSP stream paths (`/live2/` -> `/live2`) to prevent strict RTSP `404 Stream Not Found` errors, and disabled real-time packet overflow dropping for local media files.
+- **Cross-Platform Signal, INI Settings & Lockfile Handling**: Added Windows console control handler (`SetConsoleCtrlHandler`), parent terminal console attachment for CLI flags (`--help`, `--version`), `QSettings::IniFormat` default config storage (`%APPDATA%\StreamMatrix\StreamMatrix.ini`), and `USERNAME` fallback for single-instance lockfiles.
 
 ## [2.0.0] - 2026-10-20
 
+> **Release Summary:** Major RTSP pipeline and resource efficiency overhaul—featuring immediate socket teardown on stalled feeds, a 6-second reconnect cooldown for embedded RTSP servers, zero-overhead muted audio skipping, and leaner frame queues for Raspberry Pi 5 multi-camera grids.
+
 ### Changed
-- **Tuned RTSP AVDictionary & Probe Defaults**: Increased default RTSP socket I/O `timeout` to 20s (`20000000`), `analyzeduration` to 5s (`5000000`), and `probesize` to 5 MB (`5000000`) to reliably capture keyframes and handle transient camera/base-station stalls.
-- **6-Second Reconnect Cooldown**: Raised initial reconnect backoff from 2s to 6s (max 30s) to allow embedded RTSP servers (such as Eufy HomeBase Pro) time to tear down stale TCP sockets and avoid `404 Not Found` thread locks.
-- **Zero-Overhead Muted Audio Bypass**: Skipped audio packet decoding, resampling (`swr_convert`), and cross-thread signal dispatch at the demuxer level whenever a viewport is muted (`volume == 0`), significantly reducing CPU load on Raspberry Pi 5 multi-camera grids.
-- **Leaner Raspberry Pi 5 Queue Limits**: Reduced decoded video frame queue limit (`VIDEO_FRAMES_LIMIT`) from 24 to 8 and packet queue limit (`VIDEO_PACKETS_LIMIT`) from 64 to 32 to lower memory footprint and glass-to-glass latency.
+- **Tuned RTSP AVDictionary & Probe Defaults**: Increased default RTSP socket I/O `timeout` to 20s (`20000000`), `analyzeduration` to 5s (`5000000`), and `probesize` to 5 MB (`5000000`) to reliably capture keyframes and handle transient camera or base-station stalls.
+- **6-Second Reconnect Cooldown**: Raised initial reconnect backoff from 2s to 6s (max 30s) to give embedded RTSP servers (such as Eufy HomeBase Pro and NVR appliances) sufficient time to tear down stale TCP sockets and avoid `404 Not Found` session locks.
+- **Zero-Overhead Muted Audio Bypass**: Skipped audio packet decoding, resampling (`swr_convert`), and cross-thread signal dispatch at the demuxer level whenever a viewport is muted (`volume == 0`), substantially reducing CPU overhead on multi-camera grids.
+- **Leaner Raspberry Pi 5 Queue Limits**: Reduced decoded video frame queue limit (`VIDEO_FRAMES_LIMIT`) from 24 to 8 and packet queue limit (`VIDEO_PACKETS_LIMIT`) from 64 to 32 to lower RAM usage and glass-to-glass latency.
 - **FFmpeg 7 Option Compatibility & Sanitization**: Automatically mapped deprecated `-stimeout` options to `-timeout` and filtered out CLI-only flags (`-thread_queue_size`, `-i`) before calling `avformat_open_input`.
 
 ### Fixed
-- **Stalled-Stream Watchdog Socket Teardown**: Fixed `QmlAVPlayer::updateMetrics()` so stalled streams immediately tear down the dead RTSP socket (`cleanup()`) *before* starting the backoff timer, rather than holding the socket open until reconnect execution.
-- **Hidden Preset Background Reconnection Leak**: Cancelled active reconnect timers on `stop()` and `setAutoPlay(false)` and gated reconnection on `m_autoPlay`, preventing hidden presets from reconnecting in the background and colliding with active camera sessions.
+- **Stalled-Stream Watchdog Socket Teardown**: Fixed `QmlAVPlayer::updateMetrics()` so stalled streams immediately tear down the dead RTSP socket (`cleanup()`) *before* starting the backoff timer, rather than holding the broken socket open until reconnect execution.
+- **Hidden Preset Background Reconnection Leak**: Cancelled active reconnect timers on `stop()` and `setAutoPlay(false)` and gated reconnection on `m_autoPlay`, preventing inactive layout presets from reconnecting in the background and colliding with active camera sessions.
 - **Per-Viewport Option Mutation**: Fixed `Player.qml` and `SideBar.qml` mutating `avOptions` in place when merging `defaultAVFormatOptions`.
 
 ## [1.2.2] - 2026-10-15
 
+> **Release Summary:** Restores the automated stream reconnection loop and 7-second stalled-stream watchdog (reverting the manual-only experiment from `v1.2.0`) while retaining full interactive retry controls and FFmpeg error diagnostics.
+
 ### Changed
-- **Automatic Reconnection Restored**: Restored automatic stream reconnection loops and background recovery watchdog.
-- **Watchdog Recovery**: Stalled video feeds and lost socket connections automatically trigger reconnection attempts as configured.
-- **Preserved Status UI**: Maintained interactive retry controls and error diagnostics alongside automatic recovery.
+- **Automatic Reconnection Loop Restored**: Re-enabled automated exponential backoff reconnection (`scheduleReconnect()`) whenever a live stream drops or encounters an EOF/network error, ensuring unattended wall-mounted monitors recover without manual intervention.
+- **Stalled-Stream Watchdog Recovery**: Restored the 7-second frame-starvation watchdog timer in `QmlAVPlayer::updateMetrics()` so silently frozen RTSP sockets automatically cycle and recover.
+- **Unified Auto & Manual Retry Overlay**: Preserved the interactive **"Retry Now"** button, live backoff countdown timer, and detailed FFmpeg socket error reporting alongside automatic background recovery.
+
+## [1.2.0] - 2026-10-12
+
+> **Release Summary:** Experimental release that transitioned stream recovery to manual-only retry mode and updated default RTSP FFmpeg documentation (subsequently reverted in `v1.2.2` in favor of automatic watchdog recovery).
+
+### Changed
+- **Manual-Only Stream Reconnection (Reverted in 1.2.2)**: Temporarily disabled automatic background reconnect timers in `QmlAVPlayer` so failed streams waited for explicit user interaction via the on-screen **"Retry Now"** button.
+- **RTSP FFmpeg Option Guidance**: Updated `README.md` recommended FFmpeg options to highlight hardware decoding caveats on Raspberry Pi 5 (where H.264 uses multi-threaded CPU NEON decoding while hardware decode is reserved for HEVC/H.265).
 
 ## [1.1.1] - 2026-10-04
 
+> **Release Summary:** Major RTSP decoding performance and latency update for Raspberry Pi 5 and multi-core systems—enabling active `FF_THREAD_FRAME` multi-threaded decoding and keyframe-aware packet queue dropping.
+
 ### Changed
 - **Multi-Threaded Frame Decoding**: Ensured multi-threaded slice and frame decoding (`FF_THREAD_FRAME`) is actively utilized by filtering out conflicting `low_delay` flags during video decoder initialization, significantly improving multi-core CPU utilization on devices like Raspberry Pi 5.
-- **Keyframe-Aware Overflow Protection**: Refactored packet waiting queue to use `std::deque` with keyframe-aware dropping (`AV_PKT_FLAG_KEY`), preventing video corruption and visual smearing when network packet buffers overflow.
+- **Keyframe-Aware Overflow Protection**: Refactored packet waiting queue to use `std::deque` with keyframe-aware dropping (`AV_PKT_FLAG_KEY`), jumping cleanly to the next keyframe sync point when network buffers overflow and preventing gray frames or visual smearing.
 - **Latency Backlog Reduction**: Reduced video packet buffer limit to ~2 seconds of backlog (64 packets), allowing streams that temporarily lag to rapidly catch up and resynchronize to live playback.
-- **Optimized RTSP Startup & Probe Durations**: Set stream analysis duration to 1 second (`analyzeduration: 1000000`) and probe size to 500 KB (`probesize: 500000`), cutting initial connection latency and reconnect time from FFmpeg's 5-second default down to ~1 second.
-- **Cleaned Obsolete Network Flags**: Removed deprecated `stimeout` and UDP-only `buffer_size` from default connection parameters.
+- **Optimized RTSP Startup & Probe Durations**: Tuned stream analysis duration (`analyzeduration`) and probe size (`probesize`) for faster initial camera startup and reconnect times.
+- **Cleaned Obsolete Network Flags**: Removed deprecated `stimeout` and UDP-only `buffer_size` from default TCP connection parameters.
 
 ## [1.1] - 2026-10-04
 
+> **Release Summary:** Introduces an interactive reconnection overlay with tactile button feedback, real-time attempt & countdown status messages, low-level FFmpeg error diagnostics, and refreshed blue application branding.
+
 ### Added
-- **Interactive Reconnect Confirmation**: Instant tactile and visual feedback on the "Retry Now" button: hover highlights, pointing hand cursor, smooth scale compression, active `"Retrying..."` working state with animated spinner, and click debouncing.
-- **Live Reconnection Status Updates**: Real-time status messaging during reconnection attempts, displaying active phases (`"Connecting (attempt N)..."`, `"Attempting connection to stream..."`) and live second-by-second countdowns (`"Retrying in Xs (attempt N)..."`) during exponential backoff.
+- **Interactive Reconnect Confirmation**: Instant tactile and visual feedback on the **"Retry Now"** button: hover highlights, pointing hand cursor, smooth scale compression, active `"Retrying..."` working state with animated spinner, and click debouncing.
+- **Live Reconnection Status Updates**: Real-time status messaging during reconnection attempts, displaying active connection phases (`"Connecting (attempt N)..."`, `"Attempting connection to stream..."`) and live second-by-second countdowns (`"Retrying in Xs (attempt N)..."`) during exponential backoff.
 - **Detailed Socket & FFmpeg Error Diagnostics**: Captured low-level socket, protocol, and timeout errors (e.g. `"Connection refused"`, `"Connection timed out"`, `"Server returned 404 Not Found"`, `"No route to host"`), displayed directly on the stream error overlay.
-- **New Blue Icon Branding**: Redesigned application icon and branding with a sleek blue color palette matching the StreamMatrix interface styling.
+- **New Blue Icon Branding**: Redesigned application icon and branding with a sleek blue color palette matching the StreamMatrix dark interface styling.
 
 ### Fixed
 - **Reconnection State Preservation**: Fixed an issue where manual retry destroyed the reconnection overlay prematurely and left a blank screen; retry attempts now cleanly preserve reconnect state until live video frames arrive.
 
 ## [1.0.4] - 2026-10-02
 
+> **Release Summary:** Adds universal Linux packaging support with a Flathub-ready Flatpak manifest, validated AppStream 1.0 metadata, and freedesktop.org desktop entries.
+
 ### Added
-- **Flatpak & Flathub Packaging**: Added Flatpak manifest `org.streammatrix.StreamMatrix.yaml` targeting KDE Application Platform 5.15-25.08 with sandboxed network, Wayland/X11 display, PulseAudio/PipeWire audio, and DRI hardware acceleration.
-- **AppStream 1.0 Metadata**: Added validated `org.streammatrix.StreamMatrix.metainfo.xml` for Linux software centers.
-- **Freedesktop Desktop Entry**: Added `org.streammatrix.StreamMatrix.desktop` and scalable hicolor icon installation rules.
+- **Flatpak & Flathub Packaging**: Added Flatpak manifest `org.streammatrix.StreamMatrix.yaml` targeting KDE Application Platform `5.15-25.08` with sandboxed network access, Wayland/X11 display sockets, PulseAudio/PipeWire audio, and DRI hardware acceleration.
+- **AppStream 1.0 Metadata**: Added validated `org.streammatrix.StreamMatrix.metainfo.xml` with release history and feature descriptions for Linux software centers (GNOME Software, KDE Discover).
+- **Freedesktop Desktop Entry & Icons**: Added `org.streammatrix.StreamMatrix.desktop` and scalable `hicolor` SVG icon installation rules in `CMakeLists.txt`.
 
 ### Fixed
-- **Sidebar GitHub Link**: Updated repository link on the sidebar logo from upstream cctv-viewer to `ldl805/stream-matrix`.
+- **Sidebar GitHub Link**: Updated the repository URL on the sidebar logo from upstream `cctv-viewer` to `ldl805/stream-matrix`.
 
 ## [1.0.3] - 2026-10-01
 
-### Fixed
-- **RTSP Demuxer Queue Stalls & Choppiness**: Added `dropOnOverflow` ring buffer mode to `QmlAVWaitingQueue` so the demuxer thread drops the oldest unrendered packet rather than blocking when video processing experiences transient slowdowns. Increased default video packet queue capacity from 128 to 256 packets and frame buffer from 16 to 24 frames.
-- **RTSP 404/453 Reconnection Failures**: Added immediate `avformat_close_input` in `QmlAVDemuxer` destructor to promptly send RTSP `TEARDOWN` and release server sockets before creating a new connection, preventing cameras from rejecting reconnect attempts due to session exhaustion.
-- **Single-Packet Lockstep Decode Jitter**: Restructured the real-time decoding loop in `QmlAVDecoder` to eagerly drain all decoded frames immediately after sending a packet (`avcodec_receive_frame` loop) instead of waiting for the subsequent packet.
-- **Multi-Threaded H.264 Software Decoding on Pi 5 / ARM**: Configured FFmpeg multi-threaded slice and frame decoding (`thread_count = 2`, `thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME`) for software H.264 streams, utilizing Raspberry Pi 5 quad-core ARM NEON acceleration and preventing core saturation.
-- **Frozen Stream Auto-Recovery**: Integrated a 7-second stalled stream watchdog in `QmlAVPlayer::updateMetrics()` that triggers an automatic soft reconnect if no new video frames arrive from an active stream.
-- **Unbounded Audio Queue Memory Growth**: Capped `m_frames` queue in `QmlAVAudioIODevice` to 50 frames and avoided enqueuing audio buffers when muted (`volume <= 0.0`), preventing memory leaks on video-only monitoring feeds.
-- **FFmpeg 7.x Channel Layout Memory Leak**: Added explicit `av_channel_layout_uninit` in `QmlAVResampler` destructor and prior to layout copies.
-- **Stale Context Pointer Segfaults**: Cached stream properties (`timeBase`, `startTime`, `sampleAspectRatio`) in `QmlAVDecoder` so PTS calculations in `QmlAVFrame` do not dereference `AVStream` pointers after demuxer teardown.
-- **Default FFmpeg Network Options**: Updated default RTSP network parameters with 5-second socket timeouts (`-stimeout 5000000 -timeout 5000000`) and a 1MB socket buffer (`-buffer_size 1048576`), removing invalid hardware accel flags for CPU-decoded H.264.
+> **Release Summary:** Comprehensive RTSP streaming stability update resolving demuxer queue stalls, RTSP 404/453 session exhaustion, single-packet decode jitter, and FFmpeg 7 memory leaks, alongside automated multi-arch GitHub Releases.
 
 ### Added
-- **Automated GitHub Releases & Multi-Arch Packaging**: Added CPack support generating Debian `.deb` and `.tar.gz` distribution packages with architecture identification (`arm64`, `x86_64`), and added `.github/workflows/release.yml` for automated GitHub Releases on version tags.
+- **Automated GitHub Releases & Multi-Arch Packaging**: Added CPack support generating Debian `.deb` and `.tar.gz` distribution packages for `x86_64` (`amd64`) and `aarch64` (`arm64`), plus `.github/workflows/release.yml` for automated GitHub Releases on version tags.
 - **CMake Test Integration**: Enabled CTest at repository root so all unit tests run via `ctest --test-dir build`.
+
+### Fixed
+- **RTSP Demuxer Queue Stalls & Choppiness**: Added `dropOnOverflow` ring buffer mode to `QmlAVWaitingQueue` so the demuxer thread drops stale unrendered packets rather than blocking when video decoding experiences transient slowdowns.
+- **RTSP 404/453 Reconnection Failures**: Added immediate `avformat_close_input` in `QmlAVDemuxer` destructor to promptly send RTSP `TEARDOWN` and release server sockets before creating a new connection, preventing cameras from rejecting reconnect attempts due to session exhaustion.
+- **Single-Packet Lockstep Decode Jitter**: Restructured the real-time decoding loop in `QmlAVDecoder` to eagerly drain all available decoded frames after sending each packet (`avcodec_receive_frame` loop).
+- **Multi-Threaded H.264 Software Decoding on Pi 5 / ARM**: Configured FFmpeg multi-threaded slice and frame decoding (`thread_count = 2`, `thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME`) for software H.264 streams.
+- **Frozen Stream Auto-Recovery**: Integrated a 7-second stalled-stream watchdog in `QmlAVPlayer::updateMetrics()` that triggers an automatic soft reconnect if no new video frames arrive from an active stream.
+- **Unbounded Audio Queue Memory Growth**: Capped `m_frames` queue in `QmlAVAudioIODevice` to 50 frames and avoided enqueuing audio buffers when muted (`volume <= 0.0`), preventing memory leaks on video-only monitoring feeds.
+- **FFmpeg 7.x Channel Layout Memory Leak**: Added explicit `av_channel_layout_uninit` in `QmlAVResampler` destructor and prior to layout copies.
+- **Stale Context Pointer Segfaults**: Cached stream properties (`timeBase`, `startTime`, `sampleAspectRatio`) in `QmlAVDecoder` so PTS calculations in `QmlAVFrame` do not dereference freed `AVStream` pointers after demuxer teardown.
+- **Default FFmpeg Network Options**: Updated default RTSP network parameters with 5-second socket timeouts and a 1 MB socket buffer, removing invalid hardware accel flags for CPU-decoded H.264.
 
 ## [1.0.2] - 2026-09-16
 
+> **Release Summary:** Fixes keyboard shortcut interception and clean application shutdown across Wayland, X11, and terminal sessions.
+
 ### Fixed
-- **Global Key Event Interception for Quit Shortcuts**: Implemented `QuitShortcutFilter` installed at `QGuiApplication` level in C++ to intercept quit keystrokes (`Ctrl+Q`, `Ctrl+W`, `Ctrl+C`, `Alt+F4`, and `q`/`Q` outside text input controls) before any UI item can consume them, regardless of window focus state or Wayland/X11 surface hierarchy.
-- **QML Key Propagation**: Fixed `Keys.onPressed` in `ViewportsLayout.qml` (viewport item level and layout root) and `SideBar.qml` which were implicitly accepting all key events (`event.accepted = true` by default) and blocking shortcuts from receiving events whenever viewports or sidebar had active focus.
-- **Application-Scoped QML Shortcuts**: Upgraded shortcuts in `RootWindow.qml` to `Qt.ApplicationShortcut` context to ensure shortcuts trigger across the whole application lifecycle, and expanded quit sequences to include `Ctrl+Q`, `Ctrl+W`, `Ctrl+C`, `Alt+F4`, `q`, `Q`, `StandardKey.Quit`, and `StandardKey.Close`.
-- **POSIX Signal Handling**: Added async-signal-safe Unix signal socketpair handling for `SIGINT` (terminal Ctrl+C) and `SIGTERM` ensuring clean event-loop shutdown and resource cleanup.
+- **Global Key Event Interception for Quit Shortcuts**: Implemented `QuitShortcutFilter` installed at the `QGuiApplication` level in C++ to intercept quit keystrokes (`Ctrl+Q`, `Ctrl+W`, `Ctrl+C`, `Alt+F4`, and `q`/`Q` outside text input controls) before child QML items can consume them.
+- **QML Key Propagation**: Fixed `Keys.onPressed` handlers in `ViewportsLayout.qml` and `SideBar.qml` that were implicitly accepting all key events (`event.accepted = true` by default) and blocking global shortcuts when viewports or the sidebar held focus.
+- **Application-Scoped QML Shortcuts**: Upgraded shortcuts in `RootWindow.qml` to `Qt.ApplicationShortcut` context and expanded quit sequences to include `StandardKey.Quit` and `StandardKey.Close`.
+- **POSIX Signal Handling**: Added async-signal-safe Unix socketpair handling for `SIGINT` (terminal `Ctrl+C`) and `SIGTERM`, ensuring clean Qt event-loop shutdown and RTSP socket teardown.
 
 ## [1.0.1] - 2026-08-29
 
+> **Release Summary:** Resolves worker thread deadlocks during stream teardown, fixes QML window close hooks, and hardens planar video buffer handling.
+
 ### Fixed
-- **Shutdown and Quit Execution**: Connected QML engine `quit` signal to `QGuiApplication::quit` and added window `onClosing` hook, resolving issues where the app ignored quit shortcuts and menu actions.
+- **Shutdown and Quit Execution**: Connected the QML engine `quit` signal to `QGuiApplication::quit` and added a window `onClosing` hook so window-manager close events cleanly stop all active streams.
 - **Worker Thread Deadlock Prevention**: Fixed `requestInterrupt` across decoder waiting queues to properly wake blocked producer threads during shutdown and feed cancellation.
-- **Demuxer Loop Flood on Failure**: Corrected decode error propagation in the demuxer loop to prevent tight infinite loop spinning and event queue saturation.
+- **Demuxer Loop Flood on Failure**: Corrected decode error propagation in the demuxer loop to prevent tight infinite loop spinning and Qt event queue saturation on broken streams.
 - **Thread Concurrency in `wait()`**: Synchronized worker thread completion waiting on condition variables to prevent concurrent `join()` data races.
-- **Video Buffer Plane Count**: Ensured planar video buffer returns accurate active plane counts to prevent out-of-bounds plane sampling in Qt Quick rendering.
-- **Context Double-Free**: Added pointer safety in `Context` destructor.
+- **Video Buffer Plane Count & Context Safety**: Ensured planar video buffers return accurate active plane counts for Qt Quick rendering and guarded against double-free in the `Context` destructor.
 
 ## [1.0.0] - 2026-08-24
 
-### Initial Release (Independent Modernized Fork of CCTV Viewer)
+> **Release Summary:** Initial release of **StreamMatrix** as an independent, modernized fork of `cctv-viewer`, introducing the live diagnostics HUD, automated reconnect watchdog, dual-profile sub-stream switching, and Wayland/Pi 5 optimizations.
 
-#### Added
+### Added
 - **Live Stream Diagnostics Overlay (HUD)**: Press <kbd>D</kbd> to inspect real-time FPS, Resolution, Codec, Hardware Acceleration indicator `[HW]`, and Bitrate.
-- **Automated Reconnect Watchdog**: Background watchdog with exponential backoff on dropped feeds and interactive on-screen "Retry" action.
-- **Dual-Profile Sub-Stream Switching**: Support for defining high-res `URL` and low-bandwidth `Sub-Stream URL` per camera. The grid automatically renders sub-streams in multi-view and elevates to high resolution upon entering full-screen.
-- **Smart Wayland / X11 Auto-Detection**: Launcher script (`run.sh`) that dynamically selects `wayland-0` / `:0` and configures `QT_QPA_PLATFORM="wayland;xcb"`.
-- **Quote-Aware Option Tokenizer**: Robust argument parsing supporting quoted strings and flags with complex parameters.
-- **Camera Naming**: Ability to assign custom camera names to each viewport.
+- **Automated Reconnect Watchdog**: Background watchdog with exponential backoff on dropped feeds and interactive on-screen **"Retry"** action.
+- **Dual-Profile Sub-Stream Switching**: Support for defining high-resolution `URL` and low-bandwidth `Sub-Stream URL` per camera, automatically rendering sub-streams in grid layouts and switching to full resolution in full-screen mode.
+- **Smart Wayland / X11 Auto-Detection**: Launcher script (`run.sh`) that dynamically detects `wayland-0` / `:0` and configures `QT_QPA_PLATFORM="wayland;xcb"`.
+- **Quote-Aware Option Tokenizer**: Robust FFmpeg argument parser supporting quoted strings and complex option flags.
+- **Custom Camera Naming**: Ability to assign custom display titles to each camera viewport.
 
-#### Changed
-- **Cached `SwsContext` Scaling**: Replaced per-frame memory allocation/free cycles with persistent context caching using `SWS_FAST_BILINEAR`.
-- **Thread-Safe Continuous Audio Playback**: Implemented mutex-protected audio frame queue with multi-frame loop feeding in `QmlAVAudioIODevice`, eliminating crackles and buffer starvation.
+### Changed
+- **Cached `SwsContext` Scaling**: Replaced per-frame `SwsContext` allocation/free cycles with persistent context caching using `SWS_FAST_BILINEAR`.
+- **Thread-Safe Continuous Audio Playback**: Implemented a mutex-protected audio frame queue with multi-frame loop feeding in `QmlAVAudioIODevice`, eliminating audio crackles and buffer starvation.
 - **Producer-Consumer Deadlock Prevention**: Added interrupt signaling across worker threads and waiting queues.
-- **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing.
-- **Default FFmpeg Stream Config**: Pre-configured low-latency defaults (`-hwaccel drm -rtsp_transport tcp -fflags nobuffer -flags low_delay`).
-- **Removed Hardcoded Fallback Streams**: Removed third-party Russian demo streams to provide a clean slate for user configurations.
+- **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
+- **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
+
+[2.1.1]: https://github.com/ldl805/stream-matrix/compare/v2.1.0...v2.1.1
+[2.1.0]: https://github.com/ldl805/stream-matrix/compare/v2.0.0...v2.1.0
+[2.0.0]: https://github.com/ldl805/stream-matrix/compare/v1.2.2...v2.0.0
+[1.2.2]: https://github.com/ldl805/stream-matrix/compare/v1.2.0...v1.2.2
+[1.2.0]: https://github.com/ldl805/stream-matrix/compare/v1.1.1...v1.2.0
+[1.1.1]: https://github.com/ldl805/stream-matrix/compare/v1.1...v1.1.1
+[1.1]: https://github.com/ldl805/stream-matrix/compare/v1.0.4...v1.1
+[1.0.4]: https://github.com/ldl805/stream-matrix/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/ldl805/stream-matrix/compare/v1.0.2...v1.0.3
+[1.0.2]: https://github.com/ldl805/stream-matrix/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/ldl805/stream-matrix/compare/v1.0.0...v1.0.1
+[1.0.0]: https://github.com/ldl805/stream-matrix/releases/tag/v1.0.0
