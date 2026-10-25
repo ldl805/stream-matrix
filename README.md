@@ -73,6 +73,7 @@ sudo apt install -y \
     build-essential \
     cmake \
     pkg-config \
+    libgtest-dev \
     qtbase5-dev \
     qtdeclarative5-dev \
     qtmultimedia5-dev \
@@ -80,8 +81,11 @@ sudo apt install -y \
     qttools5-dev-tools \
     qml-module-qtquick2 \
     qml-module-qtquick-layouts \
+    qml-module-qtquick-controls \
     qml-module-qtquick-controls2 \
+    qml-module-qtquick-dialogs \
     qml-module-qtquick-window2 \
+    qml-module-qt-labs-settings \
     qml-module-qtmultimedia \
     qml-module-qtgraphicaleffects \
     libavformat-dev \

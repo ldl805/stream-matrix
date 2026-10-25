@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 
-enable_testing()
+find_package(GTest QUIET)
+if (NOT GTest_FOUND)
+    message(STATUS "GTest not found - skipping unit tests")
+    return()
+endif()
 
-find_package(GTest REQUIRED)
+enable_testing()
 include(GoogleTest)
 
 set(BUILD_TARGET tests)

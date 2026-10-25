@@ -32,6 +32,7 @@ set(QMLAV_FILES ${QMLAV_FILES} PARENT_SCOPE)
 set(QMLAV_LINK_DEPENDENCIES ${QMLAV_LINK_DEPENDENCIES} PARENT_SCOPE)
 
 # Tests
-if (NOT ANDROID)
+option(BUILD_TESTING "Build unit tests" ON)
+if (NOT ANDROID AND BUILD_TESTING)
     add_subdirectory(src/tests)
 endif()
