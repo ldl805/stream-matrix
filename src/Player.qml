@@ -7,6 +7,7 @@ import StreamMatrix.Themes 1.0
 FocusScope {
     id: root
 
+    property int viewportIndex: 0
     property string color: "black"
     property string cameraTitle: ""
     property bool showDiagnostics: false
@@ -32,6 +33,7 @@ FocusScope {
 
     property int reconnectCountdown: 0
     property bool manualRetryPending: false
+    property int manualRetryAttempt: 1
 
     Connections {
         target: qmlAvPlayer
@@ -96,7 +98,8 @@ FocusScope {
     Timer {
         id: timer
 
-        interval: 150
+        // Stagger initial stream startup slightly across grid cells to prevent simultaneous RTSP handshake spikes
+        interval: 100 + (Math.max(0, root.viewportIndex) % 16) * 60
 
         onTriggered: {
             if (root.visible) {
@@ -140,6 +143,19 @@ FocusScope {
             border.width: 1
 
             readonly property bool isConnecting: qmlAvPlayer.status === MediaPlayer.Loading || root.manualRetryPending
+            property real spinnerRotation: 0
+
+            Timer {
+                interval: 250
+                repeat: true
+                running: reconnectOverlay.visible && reconnectOverlay.isConnecting
+                onRunningChanged: {
+                    if (!running) {
+                        reconnectOverlay.spinnerRotation = 0;
+                    }
+                }
+                onTriggered: reconnectOverlay.spinnerRotation = (reconnectOverlay.spinnerRotation + 90) % 360
+            }
 
             Column {
                 id: reconnectLayout
@@ -156,19 +172,16 @@ FocusScope {
                         text: reconnectOverlay.isConnecting ? "🔄" : (qmlAvPlayer.errorString.length > 0 ? "⚠️" : "⏳")
                         font.pointSize: 12
                         anchors.verticalCenter: parent.verticalCenter
-                        RotationAnimator on rotation {
-                            from: 0
-                            to: 360
-                            duration: 1000
-                            loops: Animation.Infinite
-                            running: reconnectOverlay.isConnecting
-                        }
+                        rotation: reconnectOverlay.spinnerRotation
                     }
 
                     Text {
                         text: {
                             if (reconnectOverlay.isConnecting) {
-                                return qsTr("Connecting (attempt %1)...").arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
+                                var attempt = root.manualRetryPending
+                                    ? root.manualRetryAttempt
+                                    : Math.max(1, qmlAvPlayer.reconnectAttempt);
+                                return qsTr("Connecting (attempt %1)...").arg(attempt);
                             } else if (root.reconnectCountdown > 0) {
                                 return qsTr("Retrying in %1s (attempt %2)...").arg(root.reconnectCountdown).arg(Math.max(1, qmlAvPlayer.reconnectAttempt));
                             } else {
@@ -243,13 +256,7 @@ FocusScope {
                             font.pointSize: 8
                             visible: retryButton.isBusy
                             anchors.verticalCenter: parent.verticalCenter
-                            RotationAnimator on rotation {
-                                from: 0
-                                to: 360
-                                duration: 800
-                                loops: Animation.Infinite
-                                running: retryButton.isBusy
-                            }
+                            rotation: reconnectOverlay.spinnerRotation
                         }
 
                         Text {
@@ -267,13 +274,17 @@ FocusScope {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: retryButton.isBusy ? Qt.ArrowCursor : Qt.PointingHandCursor
-                        enabled: !retryButton.isBusy
+                        enabled: reconnectOverlay.visible
 
                         onClicked: {
-                            root.manualRetryPending = true;
-                            resetManualRetryTimer.restart();
-                            qmlAvPlayer.retry();
+                            if (!retryButton.isBusy) {
+                                root.manualRetryAttempt = Math.max(1, qmlAvPlayer.reconnectAttempt);
+                                root.manualRetryPending = true;
+                                resetManualRetryTimer.restart();
+                                qmlAvPlayer.retry();
+                            }
                         }
+                        onDoubleClicked: {}
                     }
                 }
             }

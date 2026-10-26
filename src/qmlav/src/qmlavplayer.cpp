@@ -58,10 +58,14 @@ void QmlAVPlayer::play()
 void QmlAVPlayer::retry()
 {
     logDebug() << "retry()";
+    bool timerWasActive = m_reconnectTimer.isActive();
     m_reconnectTimer.stop();
+    m_autoPlay = true;
     setReconnecting(true);
     setReconnectDelayMs(0);
-    setReconnectAttempt(m_reconnectAttempt + 1);
+    if (!timerWasActive || m_reconnectAttempt <= 0) {
+        setReconnectAttempt(m_reconnectAttempt + 1);
+    }
     setErrorString(QString());
 
     cleanup();
@@ -94,6 +98,13 @@ void QmlAVPlayer::cleanup()
         m_lastPacketsDropped = 0;
     }
 
+    {
+        std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
+        m_pendingVideoFrame.reset();
+    }
+    m_videoFrameQueued.store(false, std::memory_order_release);
+    m_supersededVideoFrames.store(0, std::memory_order_relaxed);
+
     if (m_videoSurface && m_videoSurface->isActive()) {
         m_videoSurface->stop();
     }
@@ -110,6 +121,12 @@ void QmlAVPlayer::cleanup()
     setHasVideo(false);
     setHasAudio(false);
     setFps(0.0);
+    setBitrate(0);
+    setVideoCodec(QString());
+    setVideoResolution(QString());
+    setIsHWAccelerated(false);
+    setFramesDecoded(0);
+    setFramesDiscarded(0);
 }
 
 void QmlAVPlayer::setVideoSurface(QAbstractVideoSurface *surface)
@@ -119,6 +136,46 @@ void QmlAVPlayer::setVideoSurface(QAbstractVideoSurface *surface)
     }
 
     m_videoSurface = surface;
+}
+
+void QmlAVPlayer::onFrameDecoded(const std::shared_ptr<QmlAVFrame> frame)
+{
+    if (!frame) {
+        return;
+    }
+
+    if (frame->type() == QmlAVFrame::TypeVideo) {
+        {
+            std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
+            if (m_pendingVideoFrame) {
+                m_supersededVideoFrames.fetch_add(1, std::memory_order_relaxed);
+            }
+            m_pendingVideoFrame = std::static_pointer_cast<QmlAVVideoFrame>(frame);
+        }
+        bool expected = false;
+        if (m_videoFrameQueued.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+            QMetaObject::invokeMethod(this, &QmlAVPlayer::presentPendingVideoFrame, Qt::QueuedConnection);
+        }
+    } else {
+        QMetaObject::invokeMethod(this, [this, frame]() {
+            frameHandler(frame);
+        }, Qt::QueuedConnection);
+    }
+}
+
+void QmlAVPlayer::presentPendingVideoFrame()
+{
+    m_videoFrameQueued.store(false, std::memory_order_release);
+
+    std::shared_ptr<QmlAVVideoFrame> vf;
+    {
+        std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
+        vf = std::move(m_pendingVideoFrame);
+    }
+
+    if (vf) {
+        frameHandler(vf);
+    }
 }
 
 void QmlAVPlayer::frameHandler(const std::shared_ptr<QmlAVFrame> frame)
@@ -312,7 +369,7 @@ bool QmlAVPlayer::load()
         m_demuxer = new QmlAVDemuxer();
         m_demuxer->setAudioEnabled(!m_muted && m_volume > 0.0);
 
-        connect(m_demuxer, &QmlAVDemuxer::frameFinished, this, &QmlAVPlayer::frameHandler);
+        connect(m_demuxer, &QmlAVDemuxer::frameFinished, this, &QmlAVPlayer::onFrameDecoded, Qt::DirectConnection);
         connect(m_demuxer, &QmlAVDemuxer::playbackStateChanged, this, &QmlAVPlayer::setPlaybackState);
         connect(m_demuxer, &QmlAVDemuxer::mediaStatusChanged, this, &QmlAVPlayer::setStatus);
         connect(m_demuxer, &QmlAVDemuxer::errorOccurred, this, &QmlAVPlayer::setErrorString);
@@ -328,6 +385,8 @@ bool QmlAVPlayer::load()
 void QmlAVPlayer::scheduleReconnect()
 {
     if (!m_autoPlay || !m_autoReconnect || !m_source.isValid() || m_source.isEmpty()) {
+        setReconnecting(false);
+        setReconnectDelayMs(0);
         return;
     }
 
@@ -442,7 +501,7 @@ void QmlAVPlayer::updateMetrics()
         }
         auto stat = m_demuxer->stat();
         setFramesDecoded(stat.value("videoFramesDecoded").toInt());
-        setFramesDiscarded(stat.value("videoFramesDiscarded").toInt());
+        setFramesDiscarded(stat.value("videoFramesDiscarded").toInt() + m_supersededVideoFrames.load(std::memory_order_relaxed));
 
         qulonglong dropped = stat.value("videoPacketsDropped").toULongLong();
         if (dropped < m_lastPacketsDropped) {

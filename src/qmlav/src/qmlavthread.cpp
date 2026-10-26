@@ -19,7 +19,6 @@ void QmlAVWorkerThread::run()
             break;
         }
 
-        std::this_thread::yield();
         ctrl.sleep();
     }
 

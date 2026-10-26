@@ -3,7 +3,6 @@ import QtQuick.Layouts 1.12
 import QtQuick.Controls 2.12
 import QtQuick.Dialogs 1.3
 import StreamMatrix.Utils 1.0
-import CCTV_Viewer.Utils 1.0
 
 Dialog {
     title: qsTr("Settings")

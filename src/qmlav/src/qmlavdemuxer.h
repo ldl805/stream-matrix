@@ -116,6 +116,12 @@ protected:
 private:
     QmlAVInterruptCallback m_interruptCallback;
     std::atomic<bool> m_audioEnabled = false;
+    std::atomic<int> m_videoWidth = 0;
+    std::atomic<int> m_videoHeight = 0;
+    std::atomic<int64_t> m_containerBitrate = 0;
+    mutable std::atomic<int64_t> m_bytesReadSinceLastCheck = 0;
+    mutable int64_t m_lastBitrateCheckUs = 0;
+    mutable int64_t m_measuredBitrate = 0;
 
     QmlAVThreadLiveController<void> m_loaderThread;
     QmlAVThreadLiveController<QmlAVLoopController> m_demuxerThread;

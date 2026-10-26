@@ -52,7 +52,7 @@ void EventFilter::prepareEvents(QStringList events)
     for (const auto &i : events) {
         auto type = m_metaEnum.keyToValue(i.toUtf8());
         if (type < 0) {
-            return;
+            continue;
         }
         m_events.push_back(static_cast<QEvent::Type>(type));
     }
@@ -72,10 +72,11 @@ void EventFilter::installEventFilter()
 
 void EventFilter::setEventTypes(QmlAVPropertyType<QStringList> events)
 {
-    if (eventTypes() == events) {
+    if (m_eventTypes == events) {
         return;
     }
 
+    m_eventTypes = events;
     prepareEvents(events);
 
     emit eventTypesChanged(events);

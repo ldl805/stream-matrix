@@ -5,9 +5,6 @@ import QtMultimedia 5.12
 import StreamMatrix.Core 1.0
 import StreamMatrix.Utils 1.0
 import StreamMatrix.Models 1.0
-import CCTV_Viewer.Core 1.0
-import CCTV_Viewer.Utils 1.0
-import CCTV_Viewer.Models 1.0
 
 FocusScope {
     id: root
@@ -149,17 +146,19 @@ FocusScope {
                 if (d.fullScreenIndex >= count) {
                     d.fullScreenIndex = -1;
                 }
-                if (d.focusIndex) {
-                    if (count == 1) {
+                if (d.focusIndex >= 0) {
+                    if (count === 1) {
                         d.focusIndex = 0;
-                    } else {
+                    } else if (d.focusIndex >= count) {
                         d.focusIndex = -1;
                     }
+                } else if (count === 1) {
+                    d.focusIndex = 0;
                 }
-                if (d.activeFocusIndex) {
+                if (d.activeFocusIndex >= 0) {
                     d.activeFocusIndex = -1;
                 }
-                if (d.pressAndHoldIndex) {
+                if (d.pressAndHoldIndex >= 0) {
                     d.pressAndHoldIndex = -1;
                 }
             }
@@ -435,86 +434,6 @@ FocusScope {
                         }
                     }
 
-                    Rectangle {
-                        id: playerContainer
-
-                        color: root.color
-                        anchors.fill: parent
-                        clip: true
-
-                        Player {
-                            id: player
-
-                            color: root.color
-                            cameraTitle: d2.name
-                            showDiagnostics: viewSettings.showDiagnostics
-                            source: d2.activeSource
-                            volume: Math.max(viewport.volume, root.fullScreenIndex === index && viewportSettings.unmuteWhenFullScreen)
-                            avOptions: viewport.avFormatOptions
-                            loops: MediaPlayer.Infinite
-                            
-                            // Apply zoom transformation when zoom is enabled
-                            scale: viewport.zoomEnabled ? viewport.zoomScale : 1.0
-                            transformOrigin: Item.TopLeft
-                            
-                            x: viewport.zoomEnabled ? viewport.panX : 0
-                            y: viewport.zoomEnabled ? viewport.panY : 0
-                            
-                            width: parent.width
-                            height: parent.height
-                            
-                            Behavior on scale {
-                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
-                            }
-                            Behavior on x {
-                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
-                            }
-                            Behavior on y {
-                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        id: selectionRect
-
-                        color: "transparent"
-                        anchors.fill: parent
-
-                        states: [
-                            State {
-                                name: "multiselect"
-                                when: root.multiselect && viewport.selected
-
-                                PropertyChanges {
-                                    target: selectionRect
-                                    color: "#4000a8ff"
-                                }
-                            }
-                        ]
-                    }
-
-                    Rectangle {
-                        id: selectionFrame
-
-                        color: "transparent"
-                        border.color: "transparent"
-                        anchors.fill: parent
-
-                        states: [
-                            State {
-                                name: "active"
-                                when: viewport.activeFocus && !Context.config.kioskMode
-
-                                PropertyChanges {
-                                    target: selectionFrame
-                                    border.width: 1
-                                    border.color: "#00dd00"
-                                }
-                            }
-                        ]
-                    }
-
                     MouseArea {
                         anchors.fill: parent
                         
@@ -593,6 +512,87 @@ FocusScope {
                                 }
                             }
                         }
+                    }
+
+                    Rectangle {
+                        id: playerContainer
+
+                        color: root.color
+                        anchors.fill: parent
+                        clip: true
+
+                        Player {
+                            id: player
+
+                            viewportIndex: model.index
+                            color: root.color
+                            cameraTitle: d2.name
+                            showDiagnostics: viewSettings.showDiagnostics
+                            source: d2.activeSource
+                            volume: Math.max(viewport.volume, root.fullScreenIndex === index && viewportSettings.unmuteWhenFullScreen)
+                            avOptions: viewport.avFormatOptions
+                            loops: MediaPlayer.Infinite
+                            
+                            // Apply zoom transformation when zoom is enabled
+                            scale: viewport.zoomEnabled ? viewport.zoomScale : 1.0
+                            transformOrigin: Item.TopLeft
+                            
+                            x: viewport.zoomEnabled ? viewport.panX : 0
+                            y: viewport.zoomEnabled ? viewport.panY : 0
+                            
+                            width: parent.width
+                            height: parent.height
+                            
+                            Behavior on scale {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                            }
+                            Behavior on x {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                            }
+                            Behavior on y {
+                                NumberAnimation { duration: 100; easing.type: Easing.OutQuad }
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        id: selectionRect
+
+                        color: "transparent"
+                        anchors.fill: parent
+
+                        states: [
+                            State {
+                                name: "multiselect"
+                                when: root.multiselect && viewport.selected
+
+                                PropertyChanges {
+                                    target: selectionRect
+                                    color: "#4000a8ff"
+                                }
+                            }
+                        ]
+                    }
+
+                    Rectangle {
+                        id: selectionFrame
+
+                        color: "transparent"
+                        border.color: "transparent"
+                        anchors.fill: parent
+
+                        states: [
+                            State {
+                                name: "active"
+                                when: viewport.activeFocus && !Context.config.kioskMode
+
+                                PropertyChanges {
+                                    target: selectionFrame
+                                    border.width: 1
+                                    border.color: "#00dd00"
+                                }
+                            }
+                        ]
                     }
 
                     function indexAt(x, y) {

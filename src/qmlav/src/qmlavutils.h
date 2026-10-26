@@ -124,21 +124,20 @@ class AVSmartPtr
 {
 public:
     AVSmartPtr() { m_ref = av_alloc(); }
-    AVSmartPtr(const T *ref) noexcept { m_ref = ref; assert(m_ref); }
+    AVSmartPtr(const T *ref) noexcept { m_ref = const_cast<T *>(ref); assert(m_ref); }
     AVSmartPtr(const AVSmartPtr &other) {
         m_ref = av_alloc();
         if (m_ref && other.m_ref) {
             av_ref(m_ref, other.m_ref);
         }
     }
-    AVSmartPtr(AVSmartPtr &&other) {
-        m_ref = av_alloc();
-        if (m_ref && other.m_ref) {
-            av_move_ref(m_ref, other.m_ref);
-        }
+    AVSmartPtr(AVSmartPtr &&other) noexcept : m_ref(other.m_ref) {
+        other.m_ref = nullptr;
     }
     virtual ~AVSmartPtr() {
-        av_free(&m_ref);
+        if (m_ref) {
+            av_free(&m_ref);
+        }
     }
 
     T *get() const noexcept { return m_ref; }
@@ -149,23 +148,37 @@ public:
         }
         return tmp;
     }
-    void unref() { av_unref(m_ref); }
+    void unref() {
+        if (m_ref) {
+            av_unref(m_ref);
+        }
+    }
 
     explicit operator bool() const noexcept { return m_ref && m_ref->data; }
     operator T *() const noexcept { return m_ref; }
     T *operator->() const noexcept { return m_ref; }
     T &operator*() const noexcept { return *m_ref; }
     AVSmartPtr &operator=(const AVSmartPtr &other) {
-        if (m_ref && other.m_ref && this != std::addressof(other)) {
-            av_unref(m_ref);
-            av_ref(m_ref, other.m_ref);
+        if (this != std::addressof(other)) {
+            if (!m_ref) {
+                m_ref = av_alloc();
+            }
+            if (m_ref) {
+                av_unref(m_ref);
+                if (other.m_ref) {
+                    av_ref(m_ref, other.m_ref);
+                }
+            }
         }
         return *this;
     }
-    AVSmartPtr &operator=(AVSmartPtr &&other) {
-        if (m_ref && other.m_ref && this != std::addressof(other)) {
-            av_unref(m_ref);
-            av_move_ref(m_ref, other.m_ref);
+    AVSmartPtr &operator=(AVSmartPtr &&other) noexcept {
+        if (this != std::addressof(other)) {
+            if (m_ref) {
+                av_free(&m_ref);
+            }
+            m_ref = other.m_ref;
+            other.m_ref = nullptr;
         }
         return *this;
     }

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <QQmlEngine>
 #include "context.h"
 
 Context::~Context()
@@ -28,6 +29,7 @@ void Context::init()
     } else {
         m_config = new Config();
     }
+    QQmlEngine::setObjectOwnership(m_config, QQmlEngine::CppOwnership);
     if (m_commandLineParser.isSet(presetOption)) {
         m_config->setCurrentIndex(m_commandLineParser.value(presetOption).toInt());
     }

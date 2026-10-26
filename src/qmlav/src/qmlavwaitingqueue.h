@@ -12,6 +12,7 @@ template<typename T>
 class QmlAVWaitingQueue
 {
 public:
+    using ValueType = T;
     // Returns true if decoding can (re)start cleanly at this element (e.g. a video keyframe)
     using SyncPointPredicate = std::function<bool(const T &)>;
 
@@ -137,6 +138,26 @@ public:
 
         value = m_queue.front();
         return true;
+    }
+
+    bool takeFront(T &value) {
+        std::unique_lock<std::mutex> lock(m_mutex);
+
+        m_consumerCond.wait(lock, [&] {
+            return m_interrupted.load(std::memory_order_relaxed) ||
+                   m_queue.size() >= m_consumerLimit;
+        });
+
+        if (m_queue.empty()) {
+            return false;
+        }
+
+        value = std::move(m_queue.front());
+        return true;
+    }
+
+    bool isInterrupted() const {
+        return m_interrupted.load(std::memory_order_acquire);
     }
 
     bool dequeue(T &value) {

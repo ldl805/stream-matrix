@@ -97,14 +97,17 @@ public:
 protected:
     template <typename URef>
     QmlAVLoopController invokeImpl(URef &&args) {
-        auto data = std::tuple_cat(std::forward_as_tuple(m_callable), std::forward<URef>(args));
+        auto invokeFn = [this](auto &&...unpackedArgs) -> decltype(auto) {
+            return QmlAVUtils::FunctionTraits<Callable>::template invoke<Callable>(
+                m_callable, std::forward<decltype(unpackedArgs)>(unpackedArgs)...);
+        };
 
         if constexpr (isLoopCtrlResult()) {
-            return std::apply(&QmlAVUtils::FunctionTraits<Callable>::template invoke<Callable>, data);
+            return std::apply(invokeFn, std::forward<URef>(args));
         } else if constexpr (isVoidResult()) {
-            std::apply(&QmlAVUtils::FunctionTraits<Callable>::template invoke<Callable>, data);
+            std::apply(invokeFn, std::forward<URef>(args));
         } else {
-            auto result = std::apply(&QmlAVUtils::FunctionTraits<Callable>::template invoke<Callable>, data);
+            auto result = std::apply(invokeFn, std::forward<URef>(args));
             this->setResult(std::move(result));
         }
 
@@ -148,22 +151,27 @@ public:
         , m_argsQueue(argsQueue) { }
 
     virtual QmlAVLoopController invoke() override final {
-        typename __Super::ArgsTuple args;
-
         if constexpr (__Super::isLoopCtrlResult()) {
-            if (m_argsQueue->head(args)) {
-                auto ctrl =  this->invokeImpl(args);
-                if (!ctrl.isRetry()) {
+            if (m_retrying || m_argsQueue->takeFront(m_currentArgs)) {
+                if (m_argsQueue->isInterrupted()) {
+                    m_retrying = false;
+                    return QmlAVLoopController::Break;
+                }
+                auto ctrl = this->invokeImpl(m_currentArgs);
+                if (ctrl.isRetry()) {
+                    m_retrying = true;
+                } else {
+                    m_retrying = false;
                     m_argsQueue->dequeue();
                 }
                 return ctrl;
             }
         } else {
-            if (m_argsQueue->dequeue(args)) {
+            if (m_argsQueue->dequeue(m_currentArgs)) {
                 if constexpr (__Super::isVoidResult()) {
-                    return this->invokeImpl(args);
+                    return this->invokeImpl(m_currentArgs);
                 } else {
-                    this->invokeImpl(args);
+                    this->invokeImpl(m_currentArgs);
                 }
             }
         }
@@ -181,6 +189,8 @@ public:
 
 private:
     std::shared_ptr<ArgsQueue> m_argsQueue;
+    typename __Super::ArgsTuple m_currentArgs{};
+    bool m_retrying = false;
 };
 
 class QmlAVWorkerThread
@@ -359,7 +369,7 @@ public:
 
     template<typename ...URef>
     bool operator() (URef &&...args) {
-        return m_argsQueue->enqueue(std::forward_as_tuple(args...));
+        return m_argsQueue->enqueue(typename ArgsQueue::ValueType(std::forward<URef>(args)...));
     }
 
     auto getLiveController() {

@@ -76,9 +76,15 @@ public:
     }
 
     bool decodeAVPacket(const AVPacketPtr &avPacket);
+    bool decodeAVPacket(AVPacketPtr &&avPacket);
 
     void requestInterrupt(bool wait = false) { m_thread.requestInterrupt(wait); }
-    void waitForEmptyPacketQueue() { m_threadTask.argsQueue()->waitForEmpty(); }
+    void waitForEmptyPacketQueue() {
+        if (m_thread.isRunning()) {
+            m_threadTask.argsQueue()->waitForEmpty();
+        }
+    }
+    void clearPacketQueue() { m_threadTask.argsQueue()->clear(); }
 
     int packetQueueLength() const { return m_threadTask.argsQueue()->length(); }
     size_t packetsDropped() const { return m_threadTask.argsQueue()->droppedCount(); }

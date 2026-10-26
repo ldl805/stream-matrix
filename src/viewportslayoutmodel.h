@@ -41,6 +41,7 @@ class ViewportsLayoutModel : public QAbstractListModel
 {
     Q_OBJECT
 
+    Q_PROPERTY(int count READ count NOTIFY sizeChanged)
     Q_PROPERTY(QSize size READ size WRITE setSize NOTIFY sizeChanged)
 
     QMLAV_PROPERTY(QSize, aspectRatio, setAspectRatio, aspectRatioChanged) = {16, 9};
@@ -55,6 +56,7 @@ public:
     virtual QHash<int, QByteArray> roleNames() const override { return m_roleNames; }
 
     // Model control interface
+    Q_INVOKABLE int count() const { return m_items.size(); }
     Q_INVOKABLE QSize size() const { return QSize(m_columns, m_rows); }
 
     Q_INVOKABLE ViewportsLayoutItem *get(int index) const { return m_items.value(index); }

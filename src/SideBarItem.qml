@@ -6,8 +6,6 @@ import QtQuick.Templates 2.12 as T
 import QtGraphicalEffects 1.12
 import StreamMatrix.Themes 1.0
 import StreamMatrix.Utils 1.0
-import CCTV_Viewer.Themes 1.0
-import CCTV_Viewer.Utils 1.0
 
 T.Page {
     id: root

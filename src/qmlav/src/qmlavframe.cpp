@@ -100,7 +100,34 @@ QmlAVPixelFormat QmlAVVideoFrame::swPixelFormat() const
 {
     if (isHWDecoded()) {
         AVHWFramesContext *hwFramesCtx = reinterpret_cast<AVHWFramesContext *>(avFrame()->hw_frames_ctx->data);
-        return hwFramesCtx->sw_format;
+        QmlAVPixelFormat swFmt(hwFramesCtx->sw_format);
+        if (swFmt.isQtNative()) {
+            return swFmt;
+        }
+
+        // For tiled/proprietary HW formats (e.g. rpi4_8 / SAND128 on Raspberry Pi 5 DRM HEVC),
+        // query libavutil for supported direct transfer target formats (e.g. yuv420p, nv12).
+        AVPixelFormat *formats = nullptr;
+        if (av_hwframe_transfer_get_formats(avFrame()->hw_frames_ctx,
+                                            AV_HWFRAME_TRANSFER_DIRECTION_FROM,
+                                            &formats, 0) == 0 && formats) {
+            AVPixelFormat chosen = AV_PIX_FMT_NONE;
+            for (int i = 0; formats[i] != AV_PIX_FMT_NONE; ++i) {
+                if (QmlAVPixelFormat(formats[i]).isQtNative()) {
+                    chosen = formats[i];
+                    break;
+                }
+            }
+            if (chosen == AV_PIX_FMT_NONE && formats[0] != AV_PIX_FMT_NONE) {
+                chosen = formats[0];
+            }
+            av_free(formats);
+            if (chosen != AV_PIX_FMT_NONE) {
+                return chosen;
+            }
+        }
+
+        return swFmt;
     }
 
     return pixelFormat();

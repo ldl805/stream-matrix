@@ -8,9 +8,6 @@ import Qt.labs.settings 1.0
 import StreamMatrix.Core 1.0
 import StreamMatrix.Models 1.0
 import StreamMatrix.Utils 1.0
-import CCTV_Viewer.Core 1.0
-import CCTV_Viewer.Models 1.0
-import CCTV_Viewer.Utils 1.0
 
 ApplicationWindow {
     id: rootWindow

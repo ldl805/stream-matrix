@@ -63,6 +63,11 @@ ViewportsLayoutItem *ViewportsLayoutModel::set(int index, ViewportsLayoutItem *p
     }
 
     if (index >= 0 && index < m_items.size()) {
+        auto *old = m_items[index];
+        if (old && old->parent() == this) {
+            old->disconnect(this);
+            old->deleteLater();
+        }
         m_items[index] = p;
 
         QModelIndex modelIndex = QAbstractListModel::index(index, 0);
@@ -74,29 +79,51 @@ ViewportsLayoutItem *ViewportsLayoutModel::set(int index, ViewportsLayoutItem *p
 
 void ViewportsLayoutModel::clear() {
     beginResetModel();
+    for (auto *item : std::as_const(m_items)) {
+        if (item && item->parent() == this) {
+            item->disconnect(this);
+            item->deleteLater();
+        }
+    }
     m_items.clear();
+    m_columns = 0;
+    m_rows = 0;
     endResetModel();
+    emit sizeChanged(QSize(0, 0));
 }
 
 void ViewportsLayoutModel::resize(int columns, int rows)
 {
+    if (rows < 0 || columns < 0) {
+        return;
+    }
+
+    const bool sizeChangedFlag = (m_columns != columns || m_rows != rows);
     int count = rows * columns;
 
-    if (rows >= 0 && columns >= 0) {
-        m_columns = columns;
-        m_rows = rows;
+    m_columns = columns;
+    m_rows = rows;
 
-        if (count > m_items.size()) {
-            beginInsertRows(QModelIndex(), m_items.size(), count - 1);
-            normalize();
-            endInsertRows();
-        } else if (count < m_items.size()) {
-            beginRemoveRows(QModelIndex(), count, m_items.size() - 1);
-            normalize();
-            endRemoveRows();
-        } else {
-            normalize();
+    if (count > m_items.size()) {
+        beginInsertRows(QModelIndex(), m_items.size(), count - 1);
+        m_items.resize(count);
+        endInsertRows();
+    } else if (count < m_items.size()) {
+        beginRemoveRows(QModelIndex(), count, m_items.size() - 1);
+        for (int i = count; i < m_items.size(); ++i) {
+            if (m_items[i] && m_items[i]->parent() == this) {
+                m_items[i]->disconnect(this);
+                m_items[i]->deleteLater();
+            }
         }
+        m_items.resize(count);
+        endRemoveRows();
+    }
+
+    normalize();
+
+    if (sizeChangedFlag) {
+        emit sizeChanged(QSize(m_columns, m_rows));
     }
 }
 
@@ -104,10 +131,9 @@ void ViewportsLayoutModel::normalize()
 {
     int count = m_columns * m_rows;
 
-    // Resize
+    // Resize if normalize() was called directly
     if (m_items.size() != count) {
         m_items.resize(count);
-        emit sizeChanged(QSize(m_columns, m_rows));
     }
 
     int maxIterations = 5;
@@ -199,10 +225,8 @@ void ViewportsLayoutModel::normalize()
 
 void ViewportsLayoutModel::fromJSValue(const QVariantMap &model)
 {
-    QVariant val;
-
     if (model.contains("size")) {
-        val = model.value("size");
+        QVariant val = model.value("size");
         if (val.canConvert(QMetaType::QVariantMap)) {
             int width = val.toMap().value("width").toInt();
             int height = val.toMap().value("height").toInt();
@@ -211,7 +235,7 @@ void ViewportsLayoutModel::fromJSValue(const QVariantMap &model)
     }
 
     if (model.contains("aspectRatio")) {
-        val = model.value("aspectRatio");
+        QVariant val = model.value("aspectRatio");
         if (val.canConvert(QMetaType::QVariantMap)) {
             int width = val.toMap().value("width").toInt();
             int height = val.toMap().value("height").toInt();
@@ -220,19 +244,19 @@ void ViewportsLayoutModel::fromJSValue(const QVariantMap &model)
     }
 
     if (model.contains("items")) {
-        val = model.value("items");
-    }
-    if (val.canConvert(QMetaType::QVariantList)) {
-        QVariantList items = val.toList();
-        for (int i = 0; i < std::min(m_items.size(), items.size()); ++i) {
-            QHashIterator<int, QByteArray> role(m_roleNames);
-            while (role.hasNext()) {
-                role.next();
+        QVariant val = model.value("items");
+        if (val.canConvert(QMetaType::QVariantList)) {
+            QVariantList items = val.toList();
+            for (int i = 0; i < std::min(m_items.size(), items.size()); ++i) {
+                QHashIterator<int, QByteArray> role(m_roleNames);
+                while (role.hasNext()) {
+                    role.next();
 
-                const char *name = role.value();
-                QVariantMap item = items.at(i).toMap();
-                if (item.contains(name)) {
-                    m_items.at(i)->setProperty(name, item.value(name));
+                    const char *name = role.value();
+                    QVariantMap item = items.at(i).toMap();
+                    if (item.contains(name)) {
+                        m_items.at(i)->setProperty(name, item.value(name));
+                    }
                 }
             }
         }
@@ -275,6 +299,4 @@ void ViewportsLayoutModel::setSize(const QSize &size)
     }
 
     resize(size.width(), size.height());
-
-    emit sizeChanged(size);
 }

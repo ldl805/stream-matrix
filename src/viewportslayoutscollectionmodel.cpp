@@ -38,7 +38,15 @@ ViewportsLayoutModel *ViewportsLayoutsCollectionModel::set(int index, ViewportsL
     }
 
     if (index >= 0 && index < m_models.size()) {
+        auto *old = m_models[index];
+        if (old && old->parent() == this) {
+            old->disconnect(this);
+            old->deleteLater();
+        }
         m_models[index] = p;
+        if (p) {
+            connect(p, &ViewportsLayoutModel::changed, this, &ViewportsLayoutsCollectionModel::changed, Qt::UniqueConnection);
+        }
 
         QModelIndex modelIndex = QAbstractListModel::index(index, 0);
         emit dataChanged(modelIndex, modelIndex);
@@ -49,9 +57,20 @@ ViewportsLayoutModel *ViewportsLayoutsCollectionModel::set(int index, ViewportsL
 
 void ViewportsLayoutsCollectionModel::clear()
 {
+    if (m_models.isEmpty()) {
+        return;
+    }
     beginResetModel();
+    for (auto *model : std::as_const(m_models)) {
+        if (model && model->parent() == this) {
+            model->disconnect(this);
+            model->deleteLater();
+        }
+    }
     m_models.clear();
     endResetModel();
+
+    emit countChanged(m_models.size());
 }
 
 ViewportsLayoutModel *ViewportsLayoutsCollectionModel::insert(int index, ViewportsLayoutModel *p)
@@ -82,7 +101,17 @@ ViewportsLayoutModel *ViewportsLayoutsCollectionModel::insert(int index, Viewpor
 
 void ViewportsLayoutsCollectionModel::remove(int index, int count)
 {
+    if (index < 0 || count <= 0 || index + count > m_models.size()) {
+        return;
+    }
+
     beginRemoveRows(QModelIndex(), index, index + count - 1);
+    for (int i = index; i < index + count; ++i) {
+        if (m_models[i] && m_models[i]->parent() == this) {
+            m_models[i]->disconnect(this);
+            m_models[i]->deleteLater();
+        }
+    }
     m_models.remove(index, count);
     endRemoveRows();
 

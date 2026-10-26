@@ -8,6 +8,8 @@
 #include <QAudioOutput>
 #include <QTimer>
 #include <QElapsedTimer>
+#include <mutex>
+#include <atomic>
 
 #include "qmlavframe.h"
 #include "qmlavdemuxer.h"
@@ -96,6 +98,8 @@ protected:
     void setErrorString(const QString &error);
 
 private slots:
+    void onFrameDecoded(const std::shared_ptr<QmlAVFrame> frame);
+    void presentPendingVideoFrame();
     void updateMetrics();
     void onReconnectTimer();
 
@@ -106,6 +110,11 @@ private:
     QTimer m_playTimer;
     QTimer m_reconnectTimer;
     QTimer m_metricsTimer;
+
+    std::mutex m_pendingVideoFrameMutex;
+    std::shared_ptr<QmlAVVideoFrame> m_pendingVideoFrame;
+    std::atomic<bool> m_videoFrameQueued{false};
+    std::atomic<int> m_supersededVideoFrames{0};
 
     QElapsedTimer m_fpsTimer;
     QElapsedTimer m_timeSinceLastVideoFrame;

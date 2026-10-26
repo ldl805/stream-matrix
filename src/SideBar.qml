@@ -7,9 +7,6 @@ import Qt.labs.settings 1.0
 import StreamMatrix.Core 1.0
 import StreamMatrix.Themes 1.0
 import StreamMatrix.Utils 1.0
-import CCTV_Viewer.Core 1.0
-import CCTV_Viewer.Themes 1.0
-import CCTV_Viewer.Utils 1.0
 
 FocusScope {
     id: rootSideBar
@@ -313,9 +310,7 @@ FocusScope {
 
                                             Button {
                                                 text: size
-                                                highlighted: {
-                                                    Utils.currentModel().size === str2size(size);
-                                                }
+                                                highlighted: Utils.currentModel().size === str2size(size)
                                                 anchors.fill: parent
 
                                                 onClicked: Utils.currentModel().size = str2size(size)

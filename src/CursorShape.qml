@@ -1,5 +1,5 @@
 import QtQuick 2.12
-import CCTV_Viewer.Utils 1.0
+import StreamMatrix.Utils 1.0
 
 MouseArea {
     id: root
@@ -26,7 +26,7 @@ MouseArea {
 
         onHiddenChanged: {
             if (hidden) {
-                hiddenCursor = cursorShape;
+                hiddenCursor = root.cursorShape;
                 root.cursorShape = Qt.BlankCursor;
             } else {
                 root.cursorShape = hiddenCursor;

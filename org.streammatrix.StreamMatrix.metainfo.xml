@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.1.2" date="2026-10-26">
+      <description>
+        <p>Major under-the-hood RTSP streaming efficiency improvements for Raspberry Pi 5 and single-board computers (zero-alloc packet moves, lazy decoder threads, AVDISCARD_ALL muted audio skipping, automatic Pi 5 DRM hardware HEVC decoding with NEON unsand transfer, GUI video frame coalescing, and staggered grid startup), plus interactive Retry Now button and thread-safety fixes.</p>
+      </description>
+    </release>
     <release version="2.1.1" date="2026-10-25">
       <description>
         <p>Added missing Debian 13 (Trixie) QML runtime and GTest dependencies, made GTest unit test compilation optional via BUILD_TESTING, added QML runtime dependencies to Debian package metadata, and refined documentation and changelog.</p>

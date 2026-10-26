@@ -4,6 +4,32 @@ All notable changes to **StreamMatrix** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.2] - 2026-10-26
+
+> **Release Summary:** Major under-the-hood RTSP streaming efficiency and concurrency overhaul for Raspberry Pi 5 and single-board computers (SBCs)—featuring zero-allocation packet moves, lazy decoder thread creation, demuxer-level muted audio discard (`AVDISCARD_ALL`), automatic Pi 5 DRM hardware HEVC decoding with zero-`swscale` NEON transfer, GUI frame coalescing, staggered grid startup, and fixes for the interactive **"Retry Now"** button and live HUD bitrate metrics.
+
+### Changed — Under-the-Hood Improvements (RTSP & Raspberry Pi 5 / SBC Efficiency)
+- **Zero-Allocation `AVSmartPtr` Moves & Direct Worker Dispatch**: Refactored `AVSmartPtr` (`AVPacketPtr` / `AVFramePtr`) move semantics to transfer `m_ref` ownership in $O(1)$ without heap-allocating/freeing `AVPacket` structs on every move, added a persistent `m_currentArgs` slot in `QmlAVWaitingQueue::takeFront()`, and replaced per-packet `std::tuple_cat` copies in `QmlAVTask` with direct `std::apply` dispatch.
+- **Lazy Decoder Thread Creation & Muted Audio Stream Discard (`AVDISCARD_ALL`)**: Deferred worker thread creation in `QmlAVDecoder` until a stream is actively opened (eliminating idle threads for empty grid tiles and muted audio streams) and configured `AVStream::discard = AVDISCARD_ALL` on muted audio tracks so FFmpeg skips demuxing audio RTP packets at the parser level.
+- **Removed Per-Packet Worker `std::this_thread::yield()`**: Eliminated unconditional `std::this_thread::yield()` calls after every task iteration in `QmlAVThread`, preventing hundreds of unnecessary voluntary context switches per second across multi-camera grids while retaining condition-variable sleep when queues are empty.
+- **Raspberry Pi 5 Hardware HEVC Decoding (`AV_HWDEVICE_TYPE_DRM`) & `AV_CODEC_FLAG2_FAST`**:
+  - Automatically selects `AV_HWDEVICE_TYPE_DRM` on ARM64 Linux when decoding HEVC (`AV_CODEC_ID_HEVC`) via the Pi 5 `rpi-hevc-dec` hardware block while keeping multi-threaded NEON software decode for H.264.
+  - Updated `QmlAVVideoFrame::swPixelFormat()` to query `av_hwframe_transfer_get_formats()` when the hardware `sw_format` uses proprietary tiled layouts (`AV_PIX_FMT_RPI4_8` / `SAND128`), transferring directly into Qt-native `AV_PIX_FMT_YUV420P` via FFmpeg's NEON `unsand` routine with zero `swscale` conversion overhead.
+  - Enabled `AV_CODEC_FLAG2_FAST` for real-time video streams and added graceful fallback to software decoding if hardware device initialization fails.
+- **GUI Video Frame Coalescing**: Added `m_pendingVideoFrame` coalescing in `QmlAVPlayer` so at most one `presentPendingVideoFrame()` call is queued per viewport on the GUI thread at a time; if a burst of decoded frames arrives before the next VSync, intermediate frames are superseded before any `av_hwframe_transfer_data`, `sws_scale`, or OpenGL texture upload occurs.
+- **Staggered Grid Startup, Low-Duty Reconnect Spinner & Corrupt Packet Discard**: Staggered `Player.qml` initial stream startup timers (`100 + (viewportIndex % 16) * 60` ms) to avoid simultaneous RTSP handshake spikes on layout switches, replaced dual 60 FPS continuous `RotationAnimator`s on offline tiles with a single 4 Hz stepped `Timer`, and enabled `AVFMT_FLAG_DISCARD_CORRUPT` on real-time streams.
+
+### Added
+- **Live Real-Time RTSP Bitrate Measurement**: Added atomic packet byte-rate tracking in `QmlAVDemuxer` so the Diagnostics HUD (<kbd>D</kbd>) reports live kbps for RTSP streams where FFmpeg leaves container-level `avFormatCtx->bit_rate` at `0`.
+
+### Fixed
+- **Interactive "Retry Now" Button on Failed Streams**: Fixed `ViewportsLayout.qml` stacking its full-viewport `MouseArea` above `playerContainer` and swallowing mouse hover/click events intended for `Player.qml`'s **"Retry Now"** button; prevented fast double-clicks on **"Retry Now"** from toggling fullscreen and prevented `QmlAVPlayer::retry()` from double-incrementing `reconnectAttempt`.
+- **Demuxer `avFormatCtx` Thread-Safety Race**: Fixed a data race / potential use-after-free where `QmlAVPlayer::updateMetrics()` read `m_context->avFormatCtx` on the GUI thread while `m_loaderThread` was concurrently inside `avformat_open_input` or `avformat_find_stream_info`.
+- **Decoder Error-Path Resource Cleanup**: Fixed `QmlAVDecoder::open()` leaking `m_avCodecCtx` and leaving the decoder wedged if codec initialization failed mid-setup.
+- **Stale HUD Metrics After Stream Stop**: Reset `bitrate`, `videoCodec`, `videoResolution`, `isHWAccelerated`, `framesDecoded`, and `framesDiscarded` in `QmlAVPlayer::cleanup()`.
+- **Viewport Layout Model Leaks & Cell Merging**: Added the missing `count` Q_PROPERTY to `ViewportsLayoutModel` (fixing cell merging in `ViewportsLayout.qml::mergeCells()`), deleted removed `ViewportsLayoutItem` `QObject`s in `clear()`/`resize()`/`remove()`/`set()` to prevent memory leaks, and guarded `Context::m_config` with `QQmlEngine::CppOwnership` to prevent double-free on exit.
+- **Event Filter & QML Binding Fixes**: Fixed `EventFilter::setEventTypes()` not storing `m_eventTypes`, fixed `SideBar.qml` missing `return` in `highlighted`, fixed `-1` vs `0` index truthiness in `ViewportsLayout.qml`, and fixed `CursorShape.qml` property references.
+
 ## [2.1.1] - 2026-10-25
 
 > **Release Summary:** Resolves source-build and QML runtime dependency issues on fresh Debian 13 (Trixie) and Ubuntu installations ([#1](https://github.com/ldl805/stream-matrix/issues/1)), makes Google Test optional during CMake configuration, embeds QML runtime package dependencies into `.deb` installers, and streamlines project documentation and release notes.
@@ -162,6 +188,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
 - **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
 
+[2.1.2]: https://github.com/ldl805/stream-matrix/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ldl805/stream-matrix/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/ldl805/stream-matrix/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/ldl805/stream-matrix/compare/v1.2.2...v2.0.0

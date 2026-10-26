@@ -130,6 +130,10 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
             return;
         }
 
+        if (m_context->clock.realTime) {
+            m_context->avFormatCtx->flags |= AVFMT_FLAG_DISCARD_CORRUPT;
+        }
+
         logDebug() << "avformat_open_input() options ignored: " << QmlAV::Quote << dict.toString();
 
         ret = avformat_find_stream_info(m_context->avFormatCtx, nullptr);
@@ -187,6 +191,20 @@ void QmlAVDemuxer::start()
             return stop();
         }
 
+        // Dynamically toggle AVDISCARD_ALL on the audio stream when muted so FFmpeg
+        // skips demuxing audio RTP packets altogether for muted viewports.
+        int audioIdx = m_context->audioDecoder->streamIndex();
+        if (audioIdx >= 0 && audioIdx < static_cast<int>(m_context->avFormatCtx->nb_streams)) {
+            bool audioOn = m_audioEnabled.load(std::memory_order_relaxed);
+            AVDiscard targetDiscard = audioOn ? AVDISCARD_DEFAULT : AVDISCARD_ALL;
+            if (m_context->avFormatCtx->streams[audioIdx]->discard != targetDiscard) {
+                m_context->avFormatCtx->streams[audioIdx]->discard = targetDiscard;
+                if (!audioOn) {
+                    m_context->audioDecoder->clearPacketQueue();
+                }
+            }
+        }
+
         m_interruptCallback.resetTimer();
 
         ret = av_read_frame(m_context->avFormatCtx, avPacket);
@@ -210,13 +228,17 @@ void QmlAVDemuxer::start()
             return stop();
         }
 
+        if (avPacket->size > 0) {
+            m_bytesReadSinceLastCheck.fetch_add(avPacket->size, std::memory_order_relaxed);
+        }
+
         if (avPacket->stream_index == m_context->videoDecoder->streamIndex()) {
-            if (!m_context->videoDecoder->decodeAVPacket(avPacket)) {
+            if (!m_context->videoDecoder->decodeAVPacket(std::move(avPacket))) {
                 return stop();
             }
-        } else if (avPacket->stream_index == m_context->audioDecoder->streamIndex()) {
+        } else if (avPacket->stream_index == audioIdx) {
             if (m_audioEnabled.load(std::memory_order_relaxed)) {
-                if (!m_context->audioDecoder->decodeAVPacket(avPacket)) {
+                if (!m_context->audioDecoder->decodeAVPacket(std::move(avPacket))) {
                     return stop();
                 }
             }
@@ -260,24 +282,30 @@ QString QmlAVDemuxer::videoCodecName() const
 
 QSize QmlAVDemuxer::videoResolution() const
 {
-    if (m_context && m_context->avFormatCtx) {
-        int streamIdx = m_context->videoDecoder ? m_context->videoDecoder->streamIndex() : -1;
-        if (streamIdx >= 0 && streamIdx < static_cast<int>(m_context->avFormatCtx->nb_streams)) {
-            auto par = m_context->avFormatCtx->streams[streamIdx]->codecpar;
-            if (par) {
-                return QSize(par->width, par->height);
-            }
-        }
+    int w = m_videoWidth.load(std::memory_order_relaxed);
+    int h = m_videoHeight.load(std::memory_order_relaxed);
+    if (w > 0 && h > 0) {
+        return QSize(w, h);
     }
     return QSize();
 }
 
 int64_t QmlAVDemuxer::bitrate() const
 {
-    if (m_context && m_context->avFormatCtx) {
-        return m_context->avFormatCtx->bit_rate;
+    int64_t nowUs = av_gettime_relative();
+    int64_t bytes = m_bytesReadSinceLastCheck.exchange(0, std::memory_order_relaxed);
+    if (m_lastBitrateCheckUs > 0 && nowUs > m_lastBitrateCheckUs) {
+        int64_t elapsedUs = nowUs - m_lastBitrateCheckUs;
+        if (bytes > 0) {
+            m_measuredBitrate = (bytes * 8 * 1000000LL) / elapsedUs;
+        }
     }
-    return 0;
+    m_lastBitrateCheckUs = nowUs;
+
+    if (m_measuredBitrate > 0) {
+        return m_measuredBitrate;
+    }
+    return m_containerBitrate.load(std::memory_order_relaxed);
 }
 
 bool QmlAVDemuxer::isHWAccelerated() const
@@ -306,12 +334,21 @@ void QmlAVDemuxer::initDecoders(const QmlAVOptions &avOptions)
     int bestVideoStream = av_find_best_stream(m_context->avFormatCtx, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
     if (bestVideoStream >= 0 && !avOptions.videoDisable()) {
         if (m_context->videoDecoder->open(m_context->avFormatCtx->streams[bestVideoStream], avOptions)) {
+            auto par = m_context->avFormatCtx->streams[bestVideoStream]->codecpar;
+            if (par) {
+                m_videoWidth.store(par->width, std::memory_order_relaxed);
+                m_videoHeight.store(par->height, std::memory_order_relaxed);
+            }
             logDebug() << QString("Codec \"%1\" for stream #%2 opened.").arg(m_context->videoDecoder->name()).arg(bestVideoStream);
         } else {
             bestVideoStream = -1;
         }
     } else {
         bestVideoStream = -1;
+    }
+
+    if (m_context->avFormatCtx) {
+        m_containerBitrate.store(m_context->avFormatCtx->bit_rate, std::memory_order_relaxed);
     }
 
     int bestAudioStream = av_find_best_stream(m_context->avFormatCtx, AVMEDIA_TYPE_AUDIO, -1, bestVideoStream, nullptr, 0);

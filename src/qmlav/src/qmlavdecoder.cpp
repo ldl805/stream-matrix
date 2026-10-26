@@ -26,7 +26,6 @@ QmlAVDecoder::QmlAVDecoder(QmlAVMediaContextHolder *context, Type type)
 {
     qRegisterMetaType<std::shared_ptr<QmlAVFrame>>();
 
-    m_thread = m_threadTask.getLiveController();
     m_threadTask.argsQueue()->setProducerLimit(m_type == TypeVideo ? VIDEO_PACKETS_LIMIT : AUDIO_PACKETS_LIMIT);
 }
 
@@ -81,6 +80,7 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         ret = avcodec_parameters_to_context(m_avCodecCtx, avStream->codecpar);
         if (ret < 0) {
             logWarning() << QString("Unable fill codec context: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+            avcodec_free_context(&m_avCodecCtx);
             return false;
         }
 
@@ -88,10 +88,19 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
             // Enable multi-threaded slice & frame decoding for software video on multi-core / Pi 5
             m_avCodecCtx->thread_count = 2;
             m_avCodecCtx->thread_type = FF_THREAD_SLICE | FF_THREAD_FRAME;
+            if (m_context && m_context->clock.realTime) {
+                m_avCodecCtx->flags2 |= AV_CODEC_FLAG2_FAST;
+            }
         }
 
         if (!initVideoDecoder(avOptions)) {
+            avcodec_free_context(&m_avCodecCtx);
             return false;
+        }
+
+        if (m_type == TypeVideo && m_avCodecCtx->hw_device_ctx != nullptr) {
+            // Hardware decoders manage their own surface pools; single-threaded dispatch avoids pool contention and latency
+            m_avCodecCtx->thread_count = 1;
         }
 
         AVDictionaryPtr opts = static_cast<AVDictionaryPtr>(avOptions);
@@ -123,6 +132,7 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
         ret = avcodec_open2(m_avCodecCtx, codec, opts);
         if (ret  < 0) {
             logWarning() << QString("Unable initialize codec context: \"%1\" (%2)").arg(av_err2str(ret)).arg(ret);
+            avcodec_free_context(&m_avCodecCtx);
             return false;
         }
 
@@ -151,6 +161,11 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
             setDropOnOverflow(m_context->clock.realTime);
         }
 
+        // Start video decoder worker immediately; audio worker starts lazily on first unmuted packet
+        if (m_type == TypeVideo) {
+            m_thread = m_threadTask.getLiveController();
+        }
+
         return true;
     }
 
@@ -159,7 +174,7 @@ bool QmlAVDecoder::open(const AVStream *avStream, const QmlAVOptions &avOptions)
 
 bool QmlAVDecoder::isOpen() const
 {
-    return m_avCodecCtx && avcodec_is_open(m_avCodecCtx) && m_thread.isRunning();
+    return m_avCodecCtx && avcodec_is_open(m_avCodecCtx);
 }
 
 QString QmlAVDecoder::name() const
@@ -170,7 +185,22 @@ QString QmlAVDecoder::name() const
 bool QmlAVDecoder::decodeAVPacket(const AVPacketPtr &avPacket)
 {
     if (isOpen()) {
+        if (!m_thread.isRunning()) {
+            m_thread = m_threadTask.getLiveController();
+        }
         return m_threadTask(this, avPacket);
+    }
+
+    return false;
+}
+
+bool QmlAVDecoder::decodeAVPacket(AVPacketPtr &&avPacket)
+{
+    if (isOpen()) {
+        if (!m_thread.isRunning()) {
+            m_thread = m_threadTask.getLiveController();
+        }
+        return m_threadTask(this, std::move(avPacket));
     }
 
     return false;
@@ -181,6 +211,7 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
     assert(m_avCodecCtx);
 
     if (m_context && m_context->clock.realTime) {
+        const int maxQueuedFrames = (m_type == TypeVideo) ? VIDEO_FRAMES_LIMIT : AUDIO_FRAMES_LIMIT;
         // Real-time RTSP/network mode: send packet and immediately drain all ready frames
         int ret = avcodec_send_packet(m_avCodecCtx, avPacket);
         if (ret == AVERROR(EAGAIN)) {
@@ -189,7 +220,7 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
                 AVFramePtr avFrame;
                 int r = avcodec_receive_frame(m_avCodecCtx, avFrame);
                 if (r < 0) break;
-                if (m_frameQueueLimit.addValue(frameQueueLength())) {
+                if (frameQueueLength() < maxQueuedFrames) {
                     auto f = makeFrame(avFrame, m_context->shared_from_this());
                     if (f && f->isValid()) {
                         m_counters.framesDecoded++;
@@ -221,7 +252,7 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
                 break;
             }
 
-            if (m_frameQueueLimit.addValue(frameQueueLength())) {
+            if (frameQueueLength() < maxQueuedFrames) {
                 auto f = makeFrame(avFrame, m_context->shared_from_this());
                 if (f && f->isValid()) {
                     m_counters.framesDecoded++;
@@ -229,7 +260,7 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
                 }
             } else {
                 m_counters.framesDiscarded++;
-                logDebug() << QString("Exceeding %1 frame queue limit: ").arg(typeName()) << m_frameQueueLimit;
+                logDebug() << QString("Exceeding %1 frame queue limit (%2)").arg(typeName()).arg(maxQueuedFrames);
             }
         }
 
@@ -301,6 +332,19 @@ bool QmlAVVideoDecoder::initVideoDecoder(const QmlAVOptions &avOptions)
     m_avCodecCtx->get_format = negotiatePixelFormatCb;
 
     AVHWDeviceType avHWDeviceType = avOptions.avHWDeviceType();
+#if defined(__linux__) && defined(__aarch64__) && !defined(__ANDROID__)
+    // On ARM64 Linux (Raspberry Pi 5 / SBCs), automatically use DRM hardware decoding for HEVC/H.265
+    // if no explicit hwaccel was specified and the codec supports AV_HWDEVICE_TYPE_DRM.
+    if (avHWDeviceType == AV_HWDEVICE_TYPE_NONE && m_avCodecCtx->codec_id == AV_CODEC_ID_HEVC && m_avCodecCtx->codec) {
+        for (int i = 0; const AVCodecHWConfig *config = avcodec_get_hw_config(m_avCodecCtx->codec, i); ++i) {
+            if ((config->methods & AV_CODEC_HW_CONFIG_METHOD_HW_DEVICE_CTX) &&
+                config->device_type == AV_HWDEVICE_TYPE_DRM) {
+                avHWDeviceType = AV_HWDEVICE_TYPE_DRM;
+                break;
+            }
+        }
+    }
+#endif
     if (avHWDeviceType != AV_HWDEVICE_TYPE_NONE) {
         AVDictionaryPtr opts;
         AVBufferRef *avHWDeviceCtx = nullptr;
@@ -313,8 +357,9 @@ bool QmlAVVideoDecoder::initVideoDecoder(const QmlAVOptions &avOptions)
 
         // TODO: Use parameters to initialize the HW device. See ffmpeg_hw.c (-hwaccel_device, -init_hw_device options)
         if (av_hwdevice_ctx_create(&avHWDeviceCtx, avHWDeviceType, nullptr, opts, 0) < 0) {
-            logWarning() << "Failed to create specified HW device";
-            return false;
+            logWarning() << "Failed to create HW device (" << av_hwdevice_get_type_name(avHWDeviceType) << "), falling back to software decoding";
+            m_hwOutput.reset();
+            return true;
         }
 
         // NOTE: This field should be set before avcodec_open2() is called and must not be written to thereafter
