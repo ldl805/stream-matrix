@@ -37,7 +37,7 @@ FocusScope {
 
     Connections {
         target: qmlAvPlayer
-        onReconnectDelayMsChanged: {
+        function onReconnectDelayMsChanged() {
             if (qmlAvPlayer.reconnectDelayMs > 0) {
                 root.reconnectCountdown = Math.ceil(qmlAvPlayer.reconnectDelayMs / 1000);
                 countdownTimer.restart();
@@ -46,7 +46,7 @@ FocusScope {
                 countdownTimer.stop();
             }
         }
-        onStatusChanged: {
+        function onStatusChanged() {
             if (qmlAvPlayer.status !== MediaPlayer.Loading && !resetManualRetryTimer.running) {
                 root.manualRetryPending = false;
             }

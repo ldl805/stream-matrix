@@ -77,10 +77,9 @@ ApplicationWindow {
         property bool presetIndicator: true
         property string defaultAVFormatOptions: JSON.stringify({
             "rtsp_transport": "tcp",
-            "fflags": "nobuffer",
             "timeout": "20000000",
-            "analyzeduration": "5000000",
-            "probesize": "5000000"
+            "analyzeduration": "1500000",
+            "probesize": "1000000"
         })
 
         function toJSValue(key) {

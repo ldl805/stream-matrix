@@ -4,6 +4,18 @@ All notable changes to **StreamMatrix** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.3] - 2026-11-03
+
+> **Release Summary:** Low-latency RTSP stream probing and instant first-keyframe lock—deferring `AVFMT_FLAG_NOBUFFER` until after `avformat_find_stream_info()` so the initial IDR keyframe is retained for immediate decoding while eliminating multi-second probe buffering during live playback, resetting the demuxer interrupt timer before stream analysis, and immediately tearing down real-time RTSP sockets on server `EndOfMedia` (`RTCP BYE`).
+
+### Changed
+- **Deferred `AVFMT_FLAG_NOBUFFER` & Low-Latency RTSP Probing (`1.5s` / `1 MB`)**: Reduced default real-time `analyzeduration` from `5000000` (5s) to `1500000` (1.5s) and `probesize` from `5000000` (5 MB) to `1000000` (1 MB), and deferred `AVFMT_FLAG_NOBUFFER` until immediately after `avformat_find_stream_info()` completes so the initial IDR keyframe read during probing is preserved for instant first-frame decode without buffering live playback.
+- **Immediate Real-Time Socket Teardown on `EndOfMedia` (`AVERROR_EOF`)**: Skipped `waitForEmptyPacketQueue()` drain on `AVERROR_EOF` for real-time streams so RTSP sockets send `TEARDOWN` immediately when an embedded camera/HomeBase sends `RTCP BYE`, and promoted `End of media` and demuxer timeout events to visible `Info`/`Warning` log entries.
+
+### Fixed
+- **Demuxer Interrupt Timer Reset Before Stream Info Probing**: Added `m_interruptCallback.resetTimer()` between `avformat_open_input()` and `avformat_find_stream_info()` in `QmlAVDemuxer::load()` so RTSP connection handshake time does not eat into the stream-analysis timeout budget.
+- **QML `Connections` Signal Handler Syntax**: Updated `Player.qml` `Connections` handlers to explicit `function onFoo()` syntax to eliminate Qt 5.15 QML runtime deprecation warnings.
+
 ## [2.1.2] - 2026-10-26
 
 > **Release Summary:** Major under-the-hood RTSP streaming efficiency and concurrency overhaul for Raspberry Pi 5 and single-board computers (SBCs)—featuring zero-allocation packet moves, lazy decoder thread creation, demuxer-level muted audio discard (`AVDISCARD_ALL`), automatic Pi 5 DRM hardware HEVC decoding with zero-`swscale` NEON transfer, GUI frame coalescing, staggered grid startup, and fixes for the interactive **"Retry Now"** button and live HUD bitrate metrics.
@@ -188,6 +200,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
 - **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
 
+[2.1.3]: https://github.com/ldl805/stream-matrix/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ldl805/stream-matrix/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ldl805/stream-matrix/compare/v2.1.0...v2.1.1
 [2.1.0]: https://github.com/ldl805/stream-matrix/compare/v2.0.0...v2.1.0

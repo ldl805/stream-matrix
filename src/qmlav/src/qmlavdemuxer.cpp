@@ -111,10 +111,15 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
                 }
             }
             if (!dict.get("analyzeduration").has_value()) {
-                dict.set("analyzeduration", "5000000"); // 5 second analysis window for longer camera GOPs
+                dict.set("analyzeduration", "1500000"); // 1.5s analysis window for fast first-keyframe lock
             }
             if (!dict.get("probesize").has_value()) {
-                dict.set("probesize", "5000000"); // 5 MB probe size for high-bitrate CBR bursts
+                dict.set("probesize", "1000000"); // 1 MB probe size for low-latency startup
+            }
+            // Defer nobuffer until after avformat_find_stream_info() so the initial IDR keyframe
+            // read during probing is retained in the packet buffer for instant first-frame decode.
+            if (auto fflags = dict.get("fflags"); fflags.has_value() && *fflags == "nobuffer") {
+                dict.remove("fflags");
             }
         }
 
@@ -136,6 +141,8 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
 
         logDebug() << "avformat_open_input() options ignored: " << QmlAV::Quote << dict.toString();
 
+        m_interruptCallback.resetTimer();
+
         ret = avformat_find_stream_info(m_context->avFormatCtx, nullptr);
         if (ret < 0) {
             QString errStr = formatAvError(ret, m_interruptCallback);
@@ -143,6 +150,10 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
             emit errorOccurred(errStr);
             emit mediaStatusChanged(QMediaPlayer::InvalidMedia);
             return;
+        }
+
+        if (m_context->clock.realTime) {
+            m_context->avFormatCtx->flags |= AVFMT_FLAG_NOBUFFER;
         }
 
         logDebug() << "--- DUMP FORMAT BEGIN ---";
@@ -210,10 +221,12 @@ void QmlAVDemuxer::start()
         ret = av_read_frame(m_context->avFormatCtx, avPacket);
         if (ret < 0) {
             if (ret == AVERROR_EOF) {
-                m_context->videoDecoder->waitForEmptyPacketQueue();
-                m_context->audioDecoder->waitForEmptyPacketQueue();
+                if (!m_context->clock.realTime) {
+                    m_context->videoDecoder->waitForEmptyPacketQueue();
+                    m_context->audioDecoder->waitForEmptyPacketQueue();
+                }
 
-                logDebug() << "End of media";
+                logInfo() << "End of media";
                 return stop(QMediaPlayer::EndOfMedia);
             }
 
@@ -222,6 +235,7 @@ void QmlAVDemuxer::start()
                 logWarning() << QString("Unable read frame: \"%1\" (%2)").arg(errStr).arg(ret);
                 emit errorOccurred(errStr);
             } else if (m_interruptCallback.hasTimedOut()) {
+                logWarning() << "Demuxer connection timed out";
                 emit errorOccurred(tr("Connection timed out"));
             }
 
