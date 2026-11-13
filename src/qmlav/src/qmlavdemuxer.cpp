@@ -109,12 +109,18 @@ void QmlAVDemuxer::load(const QUrl &url, const QmlAVOptions &avOptions)
                 if (!dict.get("timeout").has_value() && !dict.get("stimeout").has_value()) {
                     dict.set("timeout", "20000000"); // 20s socket I/O timeout (microseconds)
                 }
+                if (!dict.get("reorder_queue_size").has_value()) {
+                    dict.set("reorder_queue_size", "0"); // Disable RTP packet reordering delay over reliable TCP
+                }
+                if (!dict.get("max_delay").has_value()) {
+                    dict.set("max_delay", "500000"); // 500ms max demuxer delay
+                }
             }
             if (!dict.get("analyzeduration").has_value()) {
-                dict.set("analyzeduration", "1500000"); // 1.5s analysis window for fast first-keyframe lock
+                dict.set("analyzeduration", "1000000"); // 1s analysis window for fast first-keyframe lock
             }
             if (!dict.get("probesize").has_value()) {
-                dict.set("probesize", "1000000"); // 1 MB probe size for low-latency startup
+                dict.set("probesize", "500000"); // 500 KB probe size for low-latency startup
             }
             // Defer nobuffer until after avformat_find_stream_info() so the initial IDR keyframe
             // read during probing is retained in the packet buffer for instant first-frame decode.
@@ -220,6 +226,10 @@ void QmlAVDemuxer::start()
 
         ret = av_read_frame(m_context->avFormatCtx, avPacket);
         if (ret < 0) {
+            if (ret == AVERROR(EAGAIN)) {
+                return QmlAVLoopController(1000);
+            }
+
             if (ret == AVERROR_EOF) {
                 if (!m_context->clock.realTime) {
                     m_context->videoDecoder->waitForEmptyPacketQueue();

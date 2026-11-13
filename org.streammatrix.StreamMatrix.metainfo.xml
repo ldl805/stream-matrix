@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.1.4" date="2026-11-13">
+      <description>
+        <p>Low-latency RTSP smoothness and uptime improvements: adaptive PTS frame pacer with bounded 6-frame burst queue eliminating VSync skips and frame overwrites, GOP-spanning packet headroom (160 packets) for stall-free keyframe-aware dropping, zero-delay TCP RTP options (reorder_queue_size=0), resilient video surface recovery without dropping live connections, transient EAGAIN handling, and an unobtrusive update indicator in the sidebar header.</p>
+      </description>
+    </release>
     <release version="2.1.3" date="2026-11-03">
       <description>
         <p>Low-latency RTSP probing (1.5s / 1 MB) with deferred AVFMT_FLAG_NOBUFFER for instant first-keyframe decode and zero live demuxer buffering, interrupt timer reset before stream analysis, and immediate real-time RTSP socket teardown on EndOfMedia (RTCP BYE).</p>

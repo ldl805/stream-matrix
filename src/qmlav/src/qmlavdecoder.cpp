@@ -10,11 +10,13 @@ extern "C" {
 #include <libavutil/hwcontext.h>
 }
 
-// ~1 s of backlog at 30 fps. On overflow the video queue skips ahead to the next keyframe,
-// so a decoder that falls behind catches up to live instead of drifting seconds behind.
-#define VIDEO_PACKETS_LIMIT 32
-#define AUDIO_PACKETS_LIMIT 32
-#define VIDEO_FRAMES_LIMIT 8
+// Backlog limit before keyframe-aware overflow handling.
+// Set to 160 packets (~5s at 30 fps) so the buffer spans standard IP camera GOP intervals (2-4s /
+// 60-120 frames). During normal playback, queue length remains 0-2 packets; on overflow, the queue
+// skips ahead to the newest keyframe cleanly without triggering false multi-second sync stalls.
+#define VIDEO_PACKETS_LIMIT 160
+#define AUDIO_PACKETS_LIMIT 64
+#define VIDEO_FRAMES_LIMIT 24
 #define AUDIO_FRAMES_LIMIT 16
 
 QmlAVDecoder::QmlAVDecoder(QmlAVMediaContextHolder *context, Type type)
@@ -214,21 +216,21 @@ QmlAVLoopController QmlAVDecoder::worker(const AVPacketPtr &avPacket)
         const int maxQueuedFrames = (m_type == TypeVideo) ? VIDEO_FRAMES_LIMIT : AUDIO_FRAMES_LIMIT;
         // Real-time RTSP/network mode: send packet and immediately drain all ready frames
         int ret = avcodec_send_packet(m_avCodecCtx, avPacket);
-        if (ret == AVERROR(EAGAIN)) {
-            // Buffer full: drain frames first, then resend
-            while (true) {
-                AVFramePtr avFrame;
-                int r = avcodec_receive_frame(m_avCodecCtx, avFrame);
-                if (r < 0) break;
-                if (frameQueueLength() < maxQueuedFrames) {
-                    auto f = makeFrame(avFrame, m_context->shared_from_this());
-                    if (f && f->isValid()) {
-                        m_counters.framesDecoded++;
-                        m_context->demuxer->frameHandler(f);
-                    }
-                } else {
-                    m_counters.framesDiscarded++;
+        while (ret == AVERROR(EAGAIN)) {
+            // Buffer full: drain ready frames first, then resend
+            AVFramePtr avFrame;
+            int r = avcodec_receive_frame(m_avCodecCtx, avFrame);
+            if (r < 0) {
+                break;
+            }
+            if (frameQueueLength() < maxQueuedFrames) {
+                auto f = makeFrame(avFrame, m_context->shared_from_this());
+                if (f && f->isValid()) {
+                    m_counters.framesDecoded++;
+                    m_context->demuxer->frameHandler(f);
                 }
+            } else {
+                m_counters.framesDiscarded++;
             }
             ret = avcodec_send_packet(m_avCodecCtx, avPacket);
         }

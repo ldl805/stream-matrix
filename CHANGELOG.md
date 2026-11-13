@@ -4,6 +4,21 @@ All notable changes to **StreamMatrix** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.4] - 2026-11-13
+
+> **Release Summary:** Low-latency RTSP smoothness and uptime overhaul—replacing single-slot frame overwrites with a bounded 6-frame adaptive PTS frame pacer, expanding packet queue headroom (`160` packets) so keyframe-aware dropping spans full camera GOPs without false multi-second sync stalls, raising decoder frame headroom (`24`), preserving RTSP connections across video surface resets, handling `AVERROR(EAGAIN)` in the demuxer/decoder loops, and disabling redundant RTP TCP packet reordering buffers.
+
+### Changed
+- **Bounded 6-Frame Adaptive PTS Frame Pacer in `QmlAVPlayer`**: Replaced the single-slot `m_pendingVideoFrame` overwrite in `onFrameDecoded()` with a bounded 6-frame FIFO deque (`m_pendingVideoFrames`) and a `Qt::PreciseTimer` PTS pacer that spaces out network arrival bursts by their frame PTS intervals (with gentle catch-up compression when 3+ frames queue up) so frames are not skipped within the same VSync while keeping latency minimal.
+- **GOP-Spanning Packet Queue Headroom (`VIDEO_PACKETS_LIMIT 160`)**: Increased `VIDEO_PACKETS_LIMIT` from `32` to `160`, `AUDIO_PACKETS_LIMIT` from `32` to `64`, and `VIDEO_FRAMES_LIMIT` from `8` to `24`. Steady-state latency remains unaffected (0–2 packets in queue), while TCP jitter bursts are absorbed without triggering false GOP purges and 2–4 second keyframe sync stalls.
+- **Zero-Delay RTSP TCP Demuxer Options**: Added `reorder_queue_size=0` and `max_delay=500000` for real-time RTSP streams and lowered default probing to `analyzeduration=1000000` (1s) and `probesize=500000` (500 KB).
+- **Unobtrusive Update Notification**: Added a lightweight, non-blocking release check in the expanded sidebar header (`SideBar.qml`) that quietly displays an `Update available: vX.Y.Z` link when a newer GitHub release is published.
+
+### Fixed
+- **Preserve RTSP Connection on Surface Presentation Failure**: Changed `QmlAVPlayer::frameHandler()` to stop and re-initialize the `QAbstractVideoSurface` when `present()` returns `false` instead of calling `cleanup()` and tearing down the live RTSP connection.
+- **Transient `AVERROR(EAGAIN)` Handling**: Treated `AVERROR(EAGAIN)` in `QmlAVDemuxer` as a transient condition (1 ms yield and continue) instead of fatal stream termination, and looped `avcodec_send_packet` `EAGAIN` frame draining in `QmlAVDecoder::worker()` so buffered multi-threaded frames never drop packets.
+- **Null-Safe Sync Predicate**: Added an explicit null check on `AVPacketPtr` inside `QmlAVDecoder::setKeyframeAwareDrop()`.
+
 ## [2.1.3] - 2026-11-03
 
 > **Release Summary:** Low-latency RTSP stream probing and instant first-keyframe lock—deferring `AVFMT_FLAG_NOBUFFER` until after `avformat_find_stream_info()` so the initial IDR keyframe is retained for immediate decoding while eliminating multi-second probe buffering during live playback, resetting the demuxer interrupt timer before stream analysis, and immediately tearing down real-time RTSP sockets on server `EndOfMedia` (`RTCP BYE`).
@@ -200,6 +215,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
 - **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
 
+[2.1.4]: https://github.com/ldl805/stream-matrix/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ldl805/stream-matrix/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ldl805/stream-matrix/compare/v2.1.1...v2.1.2
 [2.1.1]: https://github.com/ldl805/stream-matrix/compare/v2.1.0...v2.1.1

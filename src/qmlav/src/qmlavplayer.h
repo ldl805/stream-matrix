@@ -10,6 +10,7 @@
 #include <QElapsedTimer>
 #include <mutex>
 #include <atomic>
+#include <deque>
 
 #include "qmlavframe.h"
 #include "qmlavdemuxer.h"
@@ -110,14 +111,18 @@ private:
     QTimer m_playTimer;
     QTimer m_reconnectTimer;
     QTimer m_metricsTimer;
+    QTimer m_framePaceTimer;
 
     std::mutex m_pendingVideoFrameMutex;
-    std::shared_ptr<QmlAVVideoFrame> m_pendingVideoFrame;
+    std::deque<std::shared_ptr<QmlAVVideoFrame>> m_pendingVideoFrames;
     std::atomic<bool> m_videoFrameQueued{false};
     std::atomic<int> m_supersededVideoFrames{0};
 
     QElapsedTimer m_fpsTimer;
     QElapsedTimer m_timeSinceLastVideoFrame;
+    QElapsedTimer m_paceClock;
+    qint64 m_lastPresentedPtsUs = AV_NOPTS_VALUE;
+    qint64 m_lastPresentedWallUs = 0;
     int m_presentedFramesCount;
     int m_currentBackoffMs;
     qulonglong m_lastPacketsDropped = 0;

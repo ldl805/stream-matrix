@@ -71,7 +71,7 @@ public:
     void setKeyframeAwareDrop() {
         m_threadTask.argsQueue()->setSyncPointPredicate([](const auto &args) {
             const auto &avPacket = std::get<AVPacketPtr>(args);
-            return (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
+            return avPacket && (avPacket->flags & AV_PKT_FLAG_KEY) != 0;
         });
     }
 

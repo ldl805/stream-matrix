@@ -20,13 +20,19 @@ QmlAVPlayer::QmlAVPlayer(QObject *parent)
     m_metricsTimer.setInterval(1000);
     connect(&m_metricsTimer, &QTimer::timeout, this, &QmlAVPlayer::updateMetrics);
 
+    m_framePaceTimer.setSingleShot(true);
+    m_framePaceTimer.setTimerType(Qt::PreciseTimer);
+    connect(&m_framePaceTimer, &QTimer::timeout, this, &QmlAVPlayer::presentPendingVideoFrame);
+
     m_fpsTimer.start();
+    m_paceClock.start();
 }
 
 QmlAVPlayer::~QmlAVPlayer()
 {
     m_reconnectTimer.stop();
     m_metricsTimer.stop();
+    m_framePaceTimer.stop();
     cleanup();
 }
 
@@ -89,7 +95,10 @@ void QmlAVPlayer::cleanup()
     logDebug() << "cleanup()";
 
     m_metricsTimer.stop();
+    m_framePaceTimer.stop();
     m_timeSinceLastVideoFrame.invalidate();
+    m_lastPresentedPtsUs = AV_NOPTS_VALUE;
+    m_lastPresentedWallUs = 0;
 
     if (m_demuxer) {
         disconnect(m_demuxer, nullptr, this, nullptr);
@@ -100,7 +109,7 @@ void QmlAVPlayer::cleanup()
 
     {
         std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
-        m_pendingVideoFrame.reset();
+        m_pendingVideoFrames.clear();
     }
     m_videoFrameQueued.store(false, std::memory_order_release);
     m_supersededVideoFrames.store(0, std::memory_order_relaxed);
@@ -145,15 +154,20 @@ void QmlAVPlayer::onFrameDecoded(const std::shared_ptr<QmlAVFrame> frame)
     }
 
     if (frame->type() == QmlAVFrame::TypeVideo) {
+        bool schedule = false;
         {
             std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
-            if (m_pendingVideoFrame) {
+            constexpr size_t MAX_PENDING_FRAMES = 6;
+            while (m_pendingVideoFrames.size() >= MAX_PENDING_FRAMES) {
+                m_pendingVideoFrames.pop_front();
                 m_supersededVideoFrames.fetch_add(1, std::memory_order_relaxed);
             }
-            m_pendingVideoFrame = std::static_pointer_cast<QmlAVVideoFrame>(frame);
+            m_pendingVideoFrames.push_back(std::static_pointer_cast<QmlAVVideoFrame>(frame));
+            if (!m_videoFrameQueued.exchange(true, std::memory_order_acq_rel)) {
+                schedule = true;
+            }
         }
-        bool expected = false;
-        if (m_videoFrameQueued.compare_exchange_strong(expected, true, std::memory_order_acq_rel)) {
+        if (schedule) {
             QMetaObject::invokeMethod(this, &QmlAVPlayer::presentPendingVideoFrame, Qt::QueuedConnection);
         }
     } else {
@@ -165,16 +179,63 @@ void QmlAVPlayer::onFrameDecoded(const std::shared_ptr<QmlAVFrame> frame)
 
 void QmlAVPlayer::presentPendingVideoFrame()
 {
-    m_videoFrameQueued.store(false, std::memory_order_release);
+    m_framePaceTimer.stop();
 
     std::shared_ptr<QmlAVVideoFrame> vf;
+    bool hasMore = false;
+    int waitMs = 0;
+    const qint64 nowUs = m_paceClock.nsecsElapsed() / 1000;
+
     {
         std::lock_guard<std::mutex> lock(m_pendingVideoFrameMutex);
-        vf = std::move(m_pendingVideoFrame);
+        if (m_playbackState != QMediaPlayer::PlayingState) {
+            m_pendingVideoFrames.clear();
+            m_videoFrameQueued.store(false, std::memory_order_release);
+            return;
+        }
+        if (m_pendingVideoFrames.empty()) {
+            m_videoFrameQueued.store(false, std::memory_order_release);
+            return;
+        }
+
+        const auto &front = m_pendingVideoFrames.front();
+        if (m_lastPresentedPtsUs != AV_NOPTS_VALUE) {
+            const qint64 ptsDeltaUs = front->pts() - m_lastPresentedPtsUs;
+            if (ptsDeltaUs > 1000 && ptsDeltaUs < 250000) {
+                const size_t queued = m_pendingVideoFrames.size();
+                // Gently accelerate pacing when 3+ frames are buffered to drain bursts without drift
+                const double factor = (queued >= 4) ? 0.75 : (queued >= 3 ? 0.85 : 0.95);
+                const qint64 pacedDeltaUs = static_cast<qint64>(ptsDeltaUs * factor);
+                const qint64 waitUs = (m_lastPresentedWallUs + pacedDeltaUs) - nowUs;
+                if (waitUs > 2000) {
+                    waitMs = qBound(1, static_cast<int>((waitUs + 500) / 1000), 200);
+                }
+            }
+        }
+
+        if (waitMs == 0) {
+            vf = std::move(m_pendingVideoFrames.front());
+            m_pendingVideoFrames.pop_front();
+            hasMore = !m_pendingVideoFrames.empty();
+            if (!hasMore) {
+                m_videoFrameQueued.store(false, std::memory_order_release);
+            }
+        }
+    }
+
+    if (waitMs > 0) {
+        m_framePaceTimer.start(waitMs);
+        return;
     }
 
     if (vf) {
+        m_lastPresentedPtsUs = vf->pts();
+        m_lastPresentedWallUs = nowUs;
         frameHandler(vf);
+    }
+
+    if (hasMore) {
+        QMetaObject::invokeMethod(this, &QmlAVPlayer::presentPendingVideoFrame, Qt::QueuedConnection);
     }
 }
 
@@ -221,7 +282,8 @@ void QmlAVPlayer::frameHandler(const std::shared_ptr<QmlAVFrame> frame)
 
                 if (m_videoSurface->isActive()) {
                     if (!m_videoSurface->present(qvf)) {
-                        cleanup();
+                        logWarning() << "Failed to present video frame, stopping surface for format reset";
+                        m_videoSurface->stop();
                     } else {
                         m_presentedFramesCount++;
                         m_timeSinceLastVideoFrame.restart();

@@ -161,6 +161,51 @@ FocusScope {
                         Frame {
                             anchors.fill: parent
 
+                            property string availableUpdate: ""
+                            property string availableUpdateUrl: "https://github.com/ldl805/stream-matrix/releases/latest"
+
+                            function isNewerVersion(latestTag, currentAppVer) {
+                                var parse = function(s) {
+                                    var token = String(s).trim().split(/\s+/)[0].replace(/^v/i, "").split("-")[0];
+                                    return token.split(".").map(function(n) { return parseInt(n, 10) || 0; });
+                                };
+                                var a = parse(latestTag);
+                                var b = parse(currentAppVer);
+                                var len = Math.max(a.length, b.length);
+                                for (var i = 0; i < len; ++i) {
+                                    var av = i < a.length ? a[i] : 0;
+                                    var bv = i < b.length ? b[i] : 0;
+                                    if (av > bv) return true;
+                                    if (av < bv) return false;
+                                }
+                                return false;
+                            }
+
+                            Timer {
+                                interval: 5000
+                                running: true
+                                repeat: false
+                                onTriggered: {
+                                    var xhr = new XMLHttpRequest();
+                                    xhr.open("GET", "https://api.github.com/repos/ldl805/stream-matrix/releases/latest");
+                                    xhr.setRequestHeader("Accept", "application/vnd.github+json");
+                                    xhr.onreadystatechange = function() {
+                                        if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
+                                            try {
+                                                var data = JSON.parse(xhr.responseText);
+                                                if (data && data.tag_name && parent.isNewerVersion(data.tag_name, Qt.application.version)) {
+                                                    parent.availableUpdate = data.tag_name.replace(/^v/i, "");
+                                                    if (data.html_url) {
+                                                        parent.availableUpdateUrl = data.html_url;
+                                                    }
+                                                }
+                                            } catch (e) {}
+                                        }
+                                    };
+                                    xhr.send();
+                                }
+                            }
+
                             ColumnLayout {
                                 anchors.fill: parent
 
@@ -188,6 +233,19 @@ FocusScope {
                                         timeout: Compact.toolTipTimeout
                                         text: qsTr("Copied to clipboard")
                                     }
+                                }
+
+                                Text {
+                                    visible: availableUpdate !== ""
+                                    text: `<a href=\"${availableUpdateUrl}\" style=\"color: #7ab8ff; text-decoration: none;\">${qsTr("Update available: v%1").arg(availableUpdate)}</a>`
+                                    font.pointSize: rootWindow.font.pointSize * 0.85
+                                    textFormat: Text.RichText
+                                    horizontalAlignment: Text.AlignHCenter
+
+                                    Layout.fillWidth: true
+
+                                    onLinkHovered: header.linkHovered(link)
+                                    onLinkActivated: Qt.openUrlExternally(link)
                                 }
 
                                 Text {

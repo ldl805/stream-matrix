@@ -78,8 +78,10 @@ ApplicationWindow {
         property string defaultAVFormatOptions: JSON.stringify({
             "rtsp_transport": "tcp",
             "timeout": "20000000",
-            "analyzeduration": "1500000",
-            "probesize": "1000000"
+            "reorder_queue_size": "0",
+            "max_delay": "500000",
+            "analyzeduration": "1000000",
+            "probesize": "500000"
         })
 
         function toJSValue(key) {
