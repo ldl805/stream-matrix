@@ -4,6 +4,16 @@ All notable changes to **StreamMatrix** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-11-14 — The Sidebar Update
+
+> **Release Summary:** *The Sidebar Update* — Repositionable left/right sidebar docking and sidebar loading fix.
+
+### Added
+- **Repositionable Left/Right Sidebar Docking**: Added persistent `sidebarPosition` (`"left"` / `"right"`) support with a one-click **Move sidebar left / right** toggle in the sidebar header (`SideBar.qml`) and a **Dock sidebar on the left side** option in **Settings** (`SettingsDialog.qml`). Both the sidebar expansion direction and video grid layout adapt dynamically (`RootWindow.qml`).
+
+### Fixed
+- **Sidebar Loading (`id` Collision)**: Fixed a duplicate `id` (`versionFrame`) in `SideBar.qml` that prevented the sidebar from loading and expanding.
+
 ## [2.1.4] - 2026-11-13
 
 > **Release Summary:** Low-latency RTSP smoothness and uptime overhaul—replacing single-slot frame overwrites with a bounded 6-frame adaptive PTS frame pacer, expanding packet queue headroom (`160` packets) so keyframe-aware dropping spans full camera GOPs without false multi-second sync stalls, raising decoder frame headroom (`24`), preserving RTSP connections across video surface resets, handling `AVERROR(EAGAIN)` in the demuxer/decoder loops, and disabling redundant RTP TCP packet reordering buffers.
@@ -215,6 +225,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
 - **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
 
+[2.2.0]: https://github.com/ldl805/stream-matrix/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/ldl805/stream-matrix/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ldl805/stream-matrix/compare/v2.1.2...v2.1.3
 [2.1.2]: https://github.com/ldl805/stream-matrix/compare/v2.1.1...v2.1.2

@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.2.0" date="2026-11-14">
+      <description>
+        <p>Added repositionable left/right sidebar docking (toggleable from the sidebar header or Settings) and fixed a duplicate QML id that prevented the sidebar from loading.</p>
+      </description>
+    </release>
     <release version="2.1.4" date="2026-11-13">
       <description>
         <p>Low-latency RTSP smoothness and uptime improvements: adaptive PTS frame pacer with bounded 6-frame burst queue eliminating VSync skips and frame overwrites, GOP-spanning packet headroom (160 packets) for stall-free keyframe-aware dropping, zero-delay TCP RTP options (reorder_queue_size=0), resilient video surface recovery without dropping live connections, transient EAGAIN handling, and an unobtrusive update indicator in the sidebar header.</p>
