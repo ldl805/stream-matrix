@@ -159,6 +159,7 @@ FocusScope {
                         Layout.fillWidth: true
 
                         Frame {
+                            id: versionFrame
                             anchors.fill: parent
 
                             property string availableUpdate: ""
@@ -193,10 +194,10 @@ FocusScope {
                                         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                                             try {
                                                 var data = JSON.parse(xhr.responseText);
-                                                if (data && data.tag_name && parent.isNewerVersion(data.tag_name, Qt.application.version)) {
-                                                    parent.availableUpdate = data.tag_name.replace(/^v/i, "");
+                                                if (data && data.tag_name && versionFrame.isNewerVersion(data.tag_name, Qt.application.version)) {
+                                                    versionFrame.availableUpdate = data.tag_name.replace(/^v/i, "");
                                                     if (data.html_url) {
-                                                        parent.availableUpdateUrl = data.html_url;
+                                                        versionFrame.availableUpdateUrl = data.html_url;
                                                     }
                                                 }
                                             } catch (e) {}
@@ -236,8 +237,8 @@ FocusScope {
                                 }
 
                                 Text {
-                                    visible: availableUpdate !== ""
-                                    text: `<a href=\"${availableUpdateUrl}\" style=\"color: #7ab8ff; text-decoration: none;\">${qsTr("Update available: v%1").arg(availableUpdate)}</a>`
+                                    visible: versionFrame.availableUpdate !== ""
+                                    text: `<a href=\"${versionFrame.availableUpdateUrl}\" style=\"color: #7ab8ff; text-decoration: none;\">${qsTr("Update available: v%1").arg(versionFrame.availableUpdate)}</a>`
                                     font.pointSize: rootWindow.font.pointSize * 0.85
                                     textFormat: Text.RichText
                                     horizontalAlignment: Text.AlignHCenter
@@ -613,6 +614,7 @@ FocusScope {
                         Layout.fillWidth: true
 
                         Frame {
+                            id: versionFrame
                             anchors.fill: parent
 
                             GridLayout {
