@@ -238,9 +238,10 @@ ApplicationWindow {
     }
 
     Item {
+        x: rootWindowSettings.sidebarPosition === "left" ? sideBarLoader.width : 0
+        y: 0
+        width: parent.width - sideBarLoader.width
         height: parent.height
-        anchors.left: rootWindowSettings.sidebarPosition === "left" ? sideBarLoader.right : parent.left
-        anchors.right: rootWindowSettings.sidebarPosition === "left" ? parent.right : sideBarLoader.left
 
         StackLayout {
             id: stackLayout
@@ -302,9 +303,10 @@ ApplicationWindow {
     Loader {
         id: sideBarLoader
 
+        x: rootWindowSettings.sidebarPosition === "left" ? 0 : (parent.width - width)
+        y: 0
+        z: 10
         height: parent.height
-        anchors.left: rootWindowSettings.sidebarPosition === "left" ? parent.left : undefined
-        anchors.right: rootWindowSettings.sidebarPosition === "left" ? undefined : parent.right
 
         Component.onCompleted: {
             if (!Context.config.kioskMode) {

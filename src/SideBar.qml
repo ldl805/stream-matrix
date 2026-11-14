@@ -68,8 +68,8 @@ FocusScope {
         opacity: Context.config.fullScreen && rootSideBar.state === SideBar.Compact ? 0 : 1
         implicitWidth: rootSideBar.state === SideBar.Compact ? compactWidth : expandedWidth
         implicitHeight: rootSideBar.height
-        anchors.left: rootWindowSettings.sidebarPosition === "left" ? parent.left : undefined
-        anchors.right: rootWindowSettings.sidebarPosition === "left" ? undefined : parent.right
+        x: rootWindowSettings.sidebarPosition === "left" ? 0 : (parent.width - width)
+        y: 0
 
         Behavior on opacity {
             enabled: !Context.config.fullScreen || rootSideBar.state !== SideBar.Compact
