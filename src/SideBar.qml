@@ -68,7 +68,8 @@ FocusScope {
         opacity: Context.config.fullScreen && rootSideBar.state === SideBar.Compact ? 0 : 1
         implicitWidth: rootSideBar.state === SideBar.Compact ? compactWidth : expandedWidth
         implicitHeight: rootSideBar.height
-        anchors.right: parent.right
+        anchors.left: rootWindowSettings.sidebarPosition === "left" ? parent.left : undefined
+        anchors.right: rootWindowSettings.sidebarPosition === "left" ? undefined : parent.right
 
         Behavior on opacity {
             enabled: !Context.config.fullScreen || rootSideBar.state !== SideBar.Compact
@@ -159,7 +160,7 @@ FocusScope {
                         Layout.fillWidth: true
 
                         Frame {
-                            id: versionFrame
+                            id: headerVersionFrame
                             anchors.fill: parent
 
                             property string availableUpdate: ""
@@ -194,10 +195,10 @@ FocusScope {
                                         if (xhr.readyState === XMLHttpRequest.DONE && xhr.status === 200) {
                                             try {
                                                 var data = JSON.parse(xhr.responseText);
-                                                if (data && data.tag_name && versionFrame.isNewerVersion(data.tag_name, Qt.application.version)) {
-                                                    versionFrame.availableUpdate = data.tag_name.replace(/^v/i, "");
+                                                if (data && data.tag_name && headerVersionFrame.isNewerVersion(data.tag_name, Qt.application.version)) {
+                                                    headerVersionFrame.availableUpdate = data.tag_name.replace(/^v/i, "");
                                                     if (data.html_url) {
-                                                        versionFrame.availableUpdateUrl = data.html_url;
+                                                        headerVersionFrame.availableUpdateUrl = data.html_url;
                                                     }
                                                 }
                                             } catch (e) {}
@@ -237,8 +238,8 @@ FocusScope {
                                 }
 
                                 Text {
-                                    visible: versionFrame.availableUpdate !== ""
-                                    text: `<a href=\"${versionFrame.availableUpdateUrl}\" style=\"color: #7ab8ff; text-decoration: none;\">${qsTr("Update available: v%1").arg(versionFrame.availableUpdate)}</a>`
+                                    visible: headerVersionFrame.availableUpdate !== ""
+                                    text: `<a href=\"${headerVersionFrame.availableUpdateUrl}\" style=\"color: #7ab8ff; text-decoration: none;\">${qsTr("Update available: v%1").arg(headerVersionFrame.availableUpdate)}</a>`
                                     font.pointSize: rootWindow.font.pointSize * 0.85
                                     textFormat: Text.RichText
                                     horizontalAlignment: Text.AlignHCenter
@@ -260,6 +261,14 @@ FocusScope {
 
                                     onLinkHovered: header.linkHovered(link)
                                     onLinkActivated: Qt.openUrlExternally(link)
+                                }
+
+                                Button {
+                                    text: rootWindowSettings.sidebarPosition === "left" ? qsTr("Move sidebar right ↦") : qsTr("↤ Move sidebar left")
+                                    Layout.fillWidth: true
+                                    onClicked: {
+                                        rootWindowSettings.sidebarPosition = (rootWindowSettings.sidebarPosition === "left") ? "right" : "left";
+                                    }
                                 }
                             }
                         }
@@ -614,7 +623,6 @@ FocusScope {
                         Layout.fillWidth: true
 
                         Frame {
-                            id: versionFrame
                             anchors.fill: parent
 
                             GridLayout {

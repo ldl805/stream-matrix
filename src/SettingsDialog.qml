@@ -36,6 +36,11 @@ Dialog {
                     id: sidebarAutoCollapseCheckBox
                     text: qsTr("Automatically collapse sidebar") 
                 }
+
+                CheckBox {
+                    id: sidebarLeftCheckBox
+                    text: qsTr("Dock sidebar on the left side")
+                }
             }
         }
 
@@ -140,6 +145,7 @@ Dialog {
     function loadSettings() {
         singleApplicationCheckBox.checked = !generalSettings.singleApplication;
         sidebarAutoCollapseCheckBox.checked = rootWindowSettings.sidebarAutoCollapse;
+        sidebarLeftCheckBox.checked = (rootWindowSettings.sidebarPosition === "left");
         presetIndicatorCheckBox.checked = layoutsCollectionSettings.presetIndicator;
         hideCursorWhenFullScreenCheckBox.checked = viewSettings.hideCursorWhenFullScreen;
         showDiagnosticsCheckBox.checked = viewSettings.showDiagnostics;
@@ -155,6 +161,7 @@ Dialog {
     function saveSettings() {
         generalSettings.singleApplication = !singleApplicationCheckBox.checked;
         rootWindowSettings.sidebarAutoCollapse = sidebarAutoCollapseCheckBox.checked;
+        rootWindowSettings.sidebarPosition = sidebarLeftCheckBox.checked ? "left" : "right";
         layoutsCollectionSettings.presetIndicator = presetIndicatorCheckBox.checked;
         viewSettings.hideCursorWhenFullScreen = hideCursorWhenFullScreenCheckBox.checked;
         viewSettings.showDiagnostics = showDiagnosticsCheckBox.checked;

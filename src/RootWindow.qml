@@ -55,6 +55,7 @@ ApplicationWindow {
         property int height: 720
         property bool fullScreen
         property bool sidebarAutoCollapse: true
+        property string sidebarPosition: "right"
 
         Component.onCompleted: {
             // Do not initialize "fullScreen" if option "-f" is set
@@ -238,8 +239,8 @@ ApplicationWindow {
 
     Item {
         height: parent.height
-        anchors.left: parent.left
-        anchors.right: sideBarLoader.left
+        anchors.left: rootWindowSettings.sidebarPosition === "left" ? sideBarLoader.right : parent.left
+        anchors.right: rootWindowSettings.sidebarPosition === "left" ? parent.right : sideBarLoader.left
 
         StackLayout {
             id: stackLayout
@@ -302,7 +303,8 @@ ApplicationWindow {
         id: sideBarLoader
 
         height: parent.height
-        anchors.right: parent.right
+        anchors.left: rootWindowSettings.sidebarPosition === "left" ? parent.left : undefined
+        anchors.right: rootWindowSettings.sidebarPosition === "left" ? undefined : parent.right
 
         Component.onCompleted: {
             if (!Context.config.kioskMode) {
