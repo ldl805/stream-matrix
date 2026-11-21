@@ -66,23 +66,23 @@ jobs:
     - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
-        msystem: MINGW64
+        msystem: UCRT64
         update: true
         install: >-
-          mingw-w64-x86_64-gcc
-          mingw-w64-x86_64-cmake
-          mingw-w64-x86_64-ninja
-          mingw-w64-x86_64-pkgconf
-          mingw-w64-x86_64-gtest
-          mingw-w64-x86_64-qt5-base
-          mingw-w64-x86_64-qt5-declarative
-          mingw-w64-x86_64-qt5-multimedia
-          mingw-w64-x86_64-qt5-quickcontrols
-          mingw-w64-x86_64-qt5-quickcontrols2
-          mingw-w64-x86_64-qt5-graphicaleffects
-          mingw-w64-x86_64-qt5-svg
-          mingw-w64-x86_64-qt5-tools
-          mingw-w64-x86_64-ffmpeg
+          mingw-w64-ucrt-x86_64-gcc
+          mingw-w64-ucrt-x86_64-cmake
+          mingw-w64-ucrt-x86_64-ninja
+          mingw-w64-ucrt-x86_64-pkgconf
+          mingw-w64-ucrt-x86_64-gtest
+          mingw-w64-ucrt-x86_64-qt5-base
+          mingw-w64-ucrt-x86_64-qt5-declarative
+          mingw-w64-ucrt-x86_64-qt5-multimedia
+          mingw-w64-ucrt-x86_64-qt5-quickcontrols
+          mingw-w64-ucrt-x86_64-qt5-quickcontrols2
+          mingw-w64-ucrt-x86_64-qt5-graphicaleffects
+          mingw-w64-ucrt-x86_64-qt5-svg
+          mingw-w64-ucrt-x86_64-qt5-tools
+          mingw-w64-ucrt-x86_64-ffmpeg
 
     - name: Configure CMake
       run: cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
