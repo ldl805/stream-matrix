@@ -17,7 +17,8 @@ Download pre-built packages from the [**Latest GitHub Release**](https://github.
 | Platform | Architecture | Package Format | Quick Install / Usage |
 | :--- | :--- | :--- | :--- |
 | **Windows** | `x86_64` | `.exe` Installer / `.zip` Portable | Run `stream-matrix-<ver>-Windows-x86_64.exe` or extract the `.zip` archive |
-| **Debian / Ubuntu / Raspberry Pi OS** | `amd64` / `arm64` | `.deb` Package | `sudo apt install ./stream-matrix_<ver>_<arch>.deb` |
+| **Raspberry Pi OS / Debian** | `arm64` | `.deb` Package (`bookworm` / `trixie`) | `sudo apt install ./stream-matrix_<ver>_debian-<distro>_arm64.deb` |
+| **Ubuntu** | `amd64` / `arm64` | `.deb` Package | `sudo apt install ./stream-matrix_<ver>_<arch>.deb` |
 | **Generic Linux** | `x86_64` / `aarch64` | `.tar.gz` Archive | Extract archive and run `bin/stream-matrix` |
 
 ---
@@ -86,17 +87,17 @@ sudo cmake --install build
 ```
 
 <details>
-<summary><strong>Windows Build & Packaging (MSYS2 / MinGW-w64)</strong></summary>
+<summary><strong>Windows Build & Packaging (MSYS2 / UCRT64)</strong></summary>
 
 ```bash
-# 1. Install toolchain, Qt 5, FFmpeg, GTest, and NSIS in MSYS2 MINGW64
+# 1. Install toolchain, Qt 5, FFmpeg, GTest, and NSIS in MSYS2 UCRT64
 pacman -S --needed \
-    mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja \
-    mingw-w64-x86_64-pkgconf mingw-w64-x86_64-gtest mingw-w64-x86_64-nsis \
-    mingw-w64-x86_64-qt5-base mingw-w64-x86_64-qt5-declarative \
-    mingw-w64-x86_64-qt5-multimedia mingw-w64-x86_64-qt5-quickcontrols \
-    mingw-w64-x86_64-qt5-quickcontrols2 mingw-w64-x86_64-qt5-graphicaleffects \
-    mingw-w64-x86_64-qt5-svg mingw-w64-x86_64-qt5-tools mingw-w64-x86_64-ffmpeg
+    mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja \
+    mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-gtest mingw-w64-ucrt-x86_64-nsis \
+    mingw-w64-ucrt-x86_64-qt5-base mingw-w64-ucrt-x86_64-qt5-declarative \
+    mingw-w64-ucrt-x86_64-qt5-multimedia mingw-w64-ucrt-x86_64-qt5-quickcontrols \
+    mingw-w64-ucrt-x86_64-qt5-quickcontrols2 mingw-w64-ucrt-x86_64-qt5-graphicaleffects \
+    mingw-w64-ucrt-x86_64-qt5-svg mingw-w64-ucrt-x86_64-qt5-tools mingw-w64-ucrt-x86_64-ffmpeg
 
 # 2. Configure, build, and run unit tests
 cmake -B build -S . -G Ninja -DCMAKE_BUILD_TYPE=Release
