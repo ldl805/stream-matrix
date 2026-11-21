@@ -50,7 +50,9 @@ jobs:
           libswresample-dev \
           libavdevice-dev \
           libva-dev \
-          dpkg-dev
+          dpkg-dev \
+          file \
+          fakeroot
 
     - name: Configure CMake
       run: cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
@@ -119,7 +121,9 @@ jobs:
           libswresample-dev \
           libavdevice-dev \
           libva-dev \
-          dpkg-dev
+          dpkg-dev \
+          file \
+          fakeroot
 
     - name: Configure CMake
       run: |
