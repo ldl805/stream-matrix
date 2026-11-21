@@ -1,9 +1,10 @@
 Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
-Upstream-Name: cctv-viewer
-Source: https://github.com/iEvgeny/cctv-viewer
+Upstream-Name: stream-matrix
+Source: https://github.com/ldl805/stream-matrix
 
 Files: *
 Copyright: 2017 Evgeny S Maksimov <admin@vragam.net>
+           2026 Justin Liedel <justinliedel@gmail.com>
 License: GPL-3.0+
  This program is free software: you can redistribute it and/or modify
  it under the terms of the GNU General Public License as published by

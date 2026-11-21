@@ -11,28 +11,28 @@ version=4
 
 # HTTP site (basic)
 #http://example.com/downloads.html \
-#  files/cctv-viewer-([\d\.]+)\.tar\.gz debian uupdate
+#  files/stream-matrix-([\d\.]+)\.tar\.gz debian uupdate
 
 # Uncommment to examine a FTP server
-#ftp://ftp.example.com/pub/cctv-viewer-(.*)\.tar\.gz debian uupdate
+#ftp://ftp.example.com/pub/stream-matrix-(.*)\.tar\.gz debian uupdate
 
 # SourceForge hosted projects
-# http://sf.net/cctv-viewer/ cctv-viewer-(.*)\.tar\.gz debian uupdate
+# http://sf.net/stream-matrix/ stream-matrix-(.*)\.tar\.gz debian uupdate
 
 # GitHub hosted projects
 #opts="filenamemangle=s%(?:.*?)?v?(\d[\d.]*)\.tar\.gz%<project>-$1.tar.gz%" \
-#   https://github.com/<user>/cctv-viewer/tags \
+#   https://github.com/ldl805/stream-matrix/tags \
 #   (?:.*?/)?v?(\d[\d.]*)\.tar\.gz debian uupdate
 
 # PyPI
-# https://pypi.debian.net/cctv-viewer/cctv-viewer-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
+# https://pypi.debian.net/stream-matrix/stream-matrix-(.+)\.(?:zip|tgz|tbz|txz|(?:tar\.(?:gz|bz2|xz)))
 
 # Direct Git
-# opts="mode=git" http://git.example.com/cctv-viewer.git \
+# opts="mode=git" http://git.example.com/stream-matrix.git \
 #   refs/tags/v([\d\.]+) debian uupdate
 
 
 
 
 # Uncomment to find new files on GooglePages
-# http://example.googlepages.com/foo.html cctv-viewer-(.*)\.tar\.gz
+# http://example.googlepages.com/foo.html stream-matrix-(.*)\.tar\.gz

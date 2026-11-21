@@ -1,5 +1,5 @@
 #!/bin/sh
-# prerm script for cctv-viewer
+# prerm script for stream-matrix
 #
 # see: dh_installdeb(1)
 

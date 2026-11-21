@@ -1,7 +1,7 @@
-Source: cctv-viewer
+Source: stream-matrix
 Section: video
 Priority: optional
-Maintainer: Evgeny S Maksimov <admin@vragam.net>
+Maintainer: Justin Liedel <justinliedel@gmail.com>
 Build-Depends: debhelper (>= 9),
                libva-dev,
                libglx-dev,
@@ -19,11 +19,11 @@ Build-Depends: debhelper (>= 9),
                cmake,
                pkg-config
 Standards-Version: 3.9.8
-Homepage: https://github.com/iEvgeny/cctv-viewer
-Vcs-Git: https://github.com/iEvgeny/cctv-viewer.git
-Vcs-Browser: https://github.com/iEvgeny/cctv-viewer
+Homepage: https://github.com/ldl805/stream-matrix
+Vcs-Git: https://github.com/ldl805/stream-matrix.git
+Vcs-Browser: https://github.com/ldl805/stream-matrix
 
-Package: cctv-viewer
+Package: stream-matrix
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends},
          libqt5multimedia5-plugins,
@@ -36,6 +36,6 @@ Depends: ${shlibs:Depends}, ${misc:Depends},
          qml-module-qtquick-dialogs,
          qml-module-qt-labs-settings,
          qml-module-qtmultimedia
-Description: CCTV Viewer - viewer and mounter video streams.
+Description: StreamMatrix - high-performance multi-stream video viewer.
  A simple application for simultaneously viewing multiple video streams.
  Designed for high performance and low latency. Based on ffmpeg.

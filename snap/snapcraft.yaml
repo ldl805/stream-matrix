@@ -1,18 +1,18 @@
-name: cctv-viewer
-version: '0.1.9+git'
+name: stream-matrix
+version: '2.2.0+git'
 license: GPL-3.0
 
-icon: images/cctv-viewer.svg
-title: CCTV Viewer
-summary: Viewer and mounter video streams
+icon: images/stream-matrix.svg
+title: StreamMatrix
+summary: High-performance video matrix application for live RTSP feeds
 description: |
-  CCTV Viewer - a simple application for simultaneously viewing multiple
+  StreamMatrix - a simple application for simultaneously viewing multiple
   video streams. Designed for high performance and low latency.
   Based on ffmpeg.
-website: https://cctv-viewer.org
-contact: mailto:me@vragam.net
-issues: https://github.com/iEvgeny/cctv-viewer/issues
-source-code: https://github.com/iEvgeny/cctv-viewer
+website: https://github.com/ldl805/stream-matrix
+contact: mailto:justinliedel@gmail.com
+issues: https://github.com/ldl805/stream-matrix/issues
+source-code: https://github.com/ldl805/stream-matrix
 
 grade: stable
 confinement: strict
@@ -59,12 +59,12 @@ layout:
     symlink: $SNAP/graphics/X11/locale
 
 apps:
-  cctv-viewer:
+  stream-matrix:
     command-chain:
       - bin/graphics-core22-wrapper
       - bin/desktop-launch
-    command: usr/bin/cctv-viewer
-    desktop: usr/share/applications/cctv-viewer.desktop
+    command: usr/bin/stream-matrix
+    desktop: usr/share/applications/stream-matrix.desktop
     plugs:
       - audio-playback
       - camera
@@ -83,7 +83,7 @@ apps:
 parts:
   # https://mir-server.io/docs/the-graphics-core22-snap-interface
   graphics-core22:
-    after: [cctv-viewer]
+    after: [stream-matrix]
     plugin: dump
     source: https://github.com/MirServer/graphics-core22.git
     override-prime: |
@@ -122,7 +122,7 @@ parts:
     stage-packages:
       - plasma-integration # KDE Plasma Keyboard Shortcuts support
 
-  cctv-viewer:
+  stream-matrix:
     after: [desktop-qt5, qt5-gtk-platform, qt5-kde-platform]
     plugin: cmake
     cmake-parameters:
@@ -131,7 +131,7 @@ parts:
     override-pull: |
       snapcraftctl pull
       # Point icon to the correct location
-      sed -i.bak -i -e 's|Icon=cctv-viewer|Icon=/usr/share/pixmaps/cctv-viewer.svg|g' cctv-viewer.desktop
+      sed -i.bak -i -e 's|Icon=stream-matrix|Icon=/usr/share/pixmaps/stream-matrix.svg|g' stream-matrix.desktop
     build-packages:
       - build-essential
       - libva-dev
