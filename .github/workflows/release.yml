@@ -74,6 +74,78 @@ jobs:
           build/*.tar.gz
           build/*.deb
 
+  build-raspberry-pi:
+    name: Build & Package (Raspberry Pi OS / Debian ${{ matrix.distro }} arm64)
+    runs-on: ubuntu-24.04-arm
+    container:
+      image: ${{ matrix.image }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - distro: bookworm
+            image: debian:bookworm
+          - distro: trixie
+            image: debian:trixie
+    continue-on-error: true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        apt-get update
+        apt-get install -y --no-install-recommends \
+          ca-certificates \
+          git \
+          build-essential \
+          cmake \
+          pkg-config \
+          libgtest-dev \
+          libgl1-mesa-dev \
+          libx11-dev \
+          qtbase5-dev \
+          qtdeclarative5-dev \
+          qtmultimedia5-dev \
+          qttools5-dev \
+          qttools5-dev-tools \
+          libavformat-dev \
+          libavcodec-dev \
+          libavutil-dev \
+          libswscale-dev \
+          libswresample-dev \
+          libavdevice-dev \
+          libva-dev \
+          dpkg-dev
+
+    - name: Configure CMake
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        cmake -B build -S . -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build
+      run: cmake --build build -j$(nproc)
+
+    - name: Run Tests
+      run: ctest --test-dir build --output-on-failure
+
+    - name: Package with CPack
+      run: |
+        cd build
+        cpack -G "DEB"
+        for f in *.deb; do
+          mv "$f" "${f%_arm64.deb}_debian-${{ matrix.distro }}_arm64.deb"
+        done
+
+    - name: Upload Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: packages-debian-${{ matrix.distro }}-arm64
+        path: build/*.deb
+
   build-windows:
     name: Build & Package (Windows x86_64)
     runs-on: windows-latest
@@ -131,7 +203,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    needs: [build, build-windows]
+    needs: [build, build-raspberry-pi, build-windows]
     runs-on: ubuntu-latest
     steps:
     - name: Checkout repository
