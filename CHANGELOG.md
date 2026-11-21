@@ -4,6 +4,14 @@ All notable changes to **StreamMatrix** are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-11-21
+
+> **Release Summary:** Migrates Windows CI and release builds to MSYS2 `UCRT64` and updates Debian/Snap packaging metadata to `stream-matrix`.
+
+### Changed
+- **Windows MSYS2 UCRT64 Migration**: Migrated GitHub Actions CI and Release Windows builds from deprecated `MINGW64` to `UCRT64` (`mingw-w64-ucrt-x86_64-*`) after MSYS2 dropped Qt5 packages from `MINGW64`.
+- **Debian & Snap Packaging Metadata**: Synced `debian/changelog` with all StreamMatrix releases, updated `debian/control`, `debian/copyright`, `debian/*.ex`, and `snap/snapcraft.yaml` from `cctv-viewer` to `stream-matrix`, and cleaned up `.github/FUNDING.yml`.
+
 ## [2.2.0] - 2026-11-14 — The Sidebar Update
 
 > **Release Summary:** *The Sidebar Update* — Repositionable left/right sidebar docking and sidebar loading fix.
@@ -225,6 +233,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - **User-Isolated Lockfile**: Upgraded `SingleApplication` lockfile path from static `/tmp` to `$XDG_RUNTIME_DIR` with UID hashing for multi-user safety.
 - **Clean Default Configuration**: Removed legacy third-party demo streams and pre-configured low-latency RTSP defaults.
 
+[2.2.1]: https://github.com/ldl805/stream-matrix/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/ldl805/stream-matrix/compare/v2.1.4...v2.2.0
 [2.1.4]: https://github.com/ldl805/stream-matrix/compare/v2.1.3...v2.1.4
 [2.1.3]: https://github.com/ldl805/stream-matrix/compare/v2.1.2...v2.1.3

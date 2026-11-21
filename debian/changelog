@@ -1,3 +1,11 @@
+stream-matrix (2.2.1-1) unstable; urgency=medium
+
+  * Migrated Windows MSYS2 CI and Release builds from MINGW64 to UCRT64.
+  * Updated Debian and Snap packaging metadata and changelog from cctv-viewer
+    to stream-matrix.
+
+ -- Justin Liedel <justinliedel@gmail.com>  Sat, 21 Nov 2026 11:38:00 -0500
+
 stream-matrix (2.2.0-1) unstable; urgency=medium
 
   * The Sidebar Update: added repositionable left/right sidebar docking with

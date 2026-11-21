@@ -37,6 +37,11 @@
   </provides>
 
   <releases>
+    <release version="2.2.1" date="2026-11-21">
+      <description>
+        <p>Migrated Windows MSYS2 builds to UCRT64 and updated Debian/Snap packaging metadata to stream-matrix.</p>
+      </description>
+    </release>
     <release version="2.2.0" date="2026-11-14">
       <description>
         <p>Added repositionable left/right sidebar docking (toggleable from the sidebar header or Settings) and fixed a duplicate QML id that prevented the sidebar from loading.</p>
